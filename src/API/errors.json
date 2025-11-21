@@ -1,0 +1,9 @@
+{
+  "PAYMENTS": [
+    { "code": "PAY-000", "message": "An unexpected error occurred." },
+    { "code": "PAY-001", "message": "Payments failed for user." },
+    { "code": "PAY-002", "message": "Refresh token failed." },
+    { "code": "PAY-003", "message": "Failed to logout user." },
+    { "code": "PAY-004", "message": "Users not found." }    
+  ] 
+}

@@ -1,0 +1,55 @@
+﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+
+using Npgsql;
+
+using Payments.Domain.Interfaces;
+using Payments.Infrastructure.Database;
+using Payments.Infrastructure.Repositories;
+
+namespace Payments.Infrastructure;
+
+public static class InfrastructureServiceRegistration
+{
+    public static IServiceCollection AddInfrastructureServices(this IServiceCollection services, IConfiguration configuration, string databaseProvider)
+    {
+        var connectionString = configuration.GetConnectionString("DefaultConnection");
+
+        NpgsqlDataSource? dataSource = null;
+        if (databaseProvider.Equals("postgresql", StringComparison.OrdinalIgnoreCase))
+        {
+            var dataSourceBuilder = new NpgsqlDataSourceBuilder(connectionString);
+            dataSourceBuilder.EnableDynamicJson();
+            dataSource = dataSourceBuilder.Build();
+        }
+
+        services.AddDbContext<ApplicationDbContext>((sp, options) =>
+        {
+            options.AddInterceptors(sp.GetServices<ISaveChangesInterceptor>());
+
+            switch (databaseProvider.ToLower())
+            {
+                case "sqlserver":
+                    options.UseSqlServer(connectionString);
+                    break;
+
+                case "postgresql":                    
+                    options.UseNpgsql(dataSource).UseSnakeCaseNamingConvention();
+                    break;
+
+                case "sqlite":
+                    //options.UseSqlite(connectionString);                     
+                    break;
+
+                default:
+                    throw new ArgumentException($"Unsupported database provider: {databaseProvider}");
+            }
+        });
+
+        services.AddScoped<IPaymentRepository, PaymentRepository>();
+
+        return services;
+    }
+}

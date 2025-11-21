@@ -1,0 +1,11 @@
+*.vs
+*.suo
+**/bin/
+**/obj/
+
+*.svn-base
+
+**/packages
+/volumes
+/src/WebAPI/Logs
+docker-compose.dcproj

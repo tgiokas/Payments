@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Global Payments HPP Test UI</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); min-height: 100vh; padding: 2rem; color: #fff; }
+        .container { max-width: 900px; margin: 0 auto; }
+        h1 { text-align: center; margin-bottom: 2rem; font-size: 2rem; background: linear-gradient(90deg, #00d9ff, #00ff88); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .card { background: rgba(255,255,255,0.05); border-radius: 16px; padding: 2rem; margin-bottom: 1.5rem; backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1); }
+        .card h2 { color: #00d9ff; margin-bottom: 1.5rem; font-size: 1.25rem; }
+        .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; }
+        .form-group { display: flex; flex-direction: column; }
+        label { font-size: 0.85rem; color: #aaa; margin-bottom: 0.5rem; }
+        input, select { padding: 0.75rem 1rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.2); background: rgba(255,255,255,0.05); color: #fff; font-size: 1rem; transition: all 0.3s; }
+        input:focus, select:focus { outline: none; border-color: #00d9ff; box-shadow: 0 0 0 3px rgba(0,217,255,0.2); }
+        input::placeholder { color: #666; }
+        .btn { padding: 1rem 2rem; border: none; border-radius: 8px; font-size: 1rem; font-weight: 600; cursor: pointer; transition: all 0.3s; }
+        .btn-primary { background: linear-gradient(90deg, #00d9ff, #00ff88); color: #1a1a2e; }
+        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 10px 30px rgba(0,217,255,0.3); }
+        .btn-secondary { background: rgba(255,255,255,0.1); color: #fff; margin-left: 1rem; }
+        .btn-secondary:hover { background: rgba(255,255,255,0.2); }
+        .btn-group { display: flex; margin-top: 1.5rem; }
+        .response-area { background: #0d1117; border-radius: 8px; padding: 1rem; font-family: 'Monaco', 'Consolas', monospace; font-size: 0.85rem; overflow-x: auto; max-height: 400px; overflow-y: auto; white-space: pre-wrap; word-break: break-all; }
+        .response-area.success { border-left: 4px solid #00ff88; }
+        .response-area.error { border-left: 4px solid #ff4757; }
+        .tabs { display: flex; gap: 0.5rem; margin-bottom: 1rem; }
+        .tab { padding: 0.5rem 1rem; background: rgba(255,255,255,0.05); border: none; color: #aaa; border-radius: 8px 8px 0 0; cursor: pointer; }
+        .tab.active { background: rgba(0,217,255,0.2); color: #00d9ff; }
+        .hidden { display: none; }
+        .status { padding: 0.5rem 1rem; border-radius: 20px; font-size: 0.85rem; display: inline-block; margin-bottom: 1rem; }
+        .status.success { background: rgba(0,255,136,0.2); color: #00ff88; }
+        .status.error { background: rgba(255,71,87,0.2); color: #ff4757; }
+        .info { background: rgba(0,217,255,0.1); border-radius: 8px; padding: 1rem; margin-bottom: 1rem; font-size: 0.9rem; color: #aaa; }
+        .info code { background: rgba(0,0,0,0.3); padding: 0.2rem 0.5rem; border-radius: 4px; color: #00d9ff; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔐 Global Payments HPP Test</h1>
+        
+        <div class="card">
+            <h2>Payment Configuration</h2>
+            <div class="info">
+                <strong>Note:</strong> Configure your credentials in <code>appsettings.json</code>. 
+                Response URL must be whitelisted by Global Payments support.
+            </div>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label>Amount</label>
+                    <input type="number" id="amount" value="19.99" step="0.01" min="0.01">
+                </div>
+                <div class="form-group">
+                    <label>Currency</label>
+                    <select id="currency">
+                        <option value="EUR">EUR - Euro</option>
+                        <option value="GBP">GBP - British Pound</option>
+                        <option value="USD">USD - US Dollar</option>
+                        <option value="CAD">CAD - Canadian Dollar</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Order ID (optional)</label>
+                    <input type="text" id="orderId" placeholder="Auto-generated if empty">
+                </div>
+                <div class="form-group">
+                    <label>Customer Email</label>
+                    <input type="email" id="email" value="test@example.com">
+                </div>
+            </div>
+        </div>
+        
+        <div class="card">
+            <h2>Billing Address</h2>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label>Street</label>
+                    <input type="text" id="street" value="123 Test Street">
+                </div>
+                <div class="form-group">
+                    <label>City</label>
+                    <input type="text" id="city" value="Dublin">
+                </div>
+                <div class="form-group">
+                    <label>Postal Code</label>
+                    <input type="text" id="postalCode" value="D01 ABC1">
+                </div>
+                <div class="form-group">
+                    <label>Country Code (ISO 3166-1 numeric)</label>
+                    <select id="countryCode">
+                        <option value="372">372 - Ireland</option>
+                        <option value="826">826 - United Kingdom</option>
+                        <option value="840">840 - United States</option>
+                        <option value="276">276 - Germany</option>
+                        <option value="250">250 - France</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card">
+            <h2>Actions</h2>
+            <div class="btn-group">
+                <button class="btn btn-primary" onclick="createPayment()">Create Payment Request</button>
+                <button class="btn btn-secondary" onclick="testRedirect()">Test Redirect Flow</button>
+                <button class="btn btn-secondary" onclick="clearResponse()">Clear</button>
+            </div>
+        </div>
+        
+        <div class="card" id="responseCard" style="display:none;">
+            <h2>Response</h2>
+            <div class="tabs">
+                <button class="tab active" onclick="showTab('json')">JSON Response</button>
+                <button class="tab" onclick="showTab('form')">Form Data</button>
+                <button class="tab" onclick="showTab('html')">Redirect HTML</button>
+            </div>
+            <div id="statusBadge"></div>
+            <pre class="response-area" id="jsonResponse"></pre>
+            <pre class="response-area hidden" id="formResponse"></pre>
+            <pre class="response-area hidden" id="htmlResponse"></pre>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = window.location.origin;
+        
+        async function createPayment() {
+            const payload = {
+                amount: parseFloat(document.getElementById('amount').value),
+                currency: document.getElementById('currency').value,
+                orderId: document.getElementById('orderId').value || null,
+                customerEmail: document.getElementById('email').value,
+                billingStreet1: document.getElementById('street').value,
+                billingCity: document.getElementById('city').value,
+                billingPostalCode: document.getElementById('postalCode').value,
+                billingCountryCode: document.getElementById('countryCode').value,
+                responseUrl: `${API_BASE}/api/payment/response`
+            };
+            
+            try {
+                const response = await fetch(`${API_BASE}/api/payment/create`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                
+                const data = await response.json();
+                showResponse(data, response.ok);
+            } catch (error) {
+                showResponse({ error: error.message }, false);
+            }
+        }
+        
+        async function testRedirect() {
+            await createPayment();
+            const htmlContent = document.getElementById('htmlResponse').textContent;
+            if (htmlContent && !htmlContent.includes('error')) {
+                const newWindow = window.open('', '_blank');
+                newWindow.document.write(htmlContent);
+            }
+        }
+        
+        function showResponse(data, success) {
+            document.getElementById('responseCard').style.display = 'block';
+            
+            const jsonEl = document.getElementById('jsonResponse');
+            const formEl = document.getElementById('formResponse');
+            const htmlEl = document.getElementById('htmlResponse');
+            const statusEl = document.getElementById('statusBadge');
+            
+            jsonEl.className = `response-area ${success ? 'success' : 'error'}`;
+            jsonEl.textContent = JSON.stringify(data, null, 2);
+            
+            if (data.formData) {
+                formEl.textContent = Object.entries(data.formData)
+                    .map(([k, v]) => `${k}: ${v}`).join('\n');
+            }
+            
+            if (data.redirectHtml) {
+                htmlEl.textContent = data.redirectHtml;
+            }
+            
+            statusEl.innerHTML = success 
+                ? '<span class="status success">✓ Request Successful</span>'
+                : '<span class="status error">✗ Request Failed</span>';
+        }
+        
+        function showTab(tab) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.response-area').forEach(r => r.classList.add('hidden'));
+            
+            event.target.classList.add('active');
+            document.getElementById(`${tab}Response`).classList.remove('hidden');
+        }
+        
+        function clearResponse() {
+            document.getElementById('responseCard').style.display = 'none';
+        }
+    </script>
+</body>
+</html>
