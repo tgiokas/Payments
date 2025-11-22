@@ -9,9 +9,10 @@ using Payments.Application;
 using Payments.Application.Errors;
 using Payments.Application.Interfaces;
 using Payments.Infrastructure;
-using Payments.Infrastructure.Caching;
+
 using Payments.Infrastructure.Database;
 using Payments.Infrastructure.Messaging;
+using Payments.Infrastructure.Gateways;
 
 
 var builder = WebApplication.CreateBuilder(args);
@@ -33,12 +34,14 @@ builder.Host.UseSerilog();
 builder.Services.AddMemoryCache();
 
 
-builder.Services.AddScoped<IEmailCache, EmailCache>();
-builder.Services.AddScoped<ISmsCache, SmsCache>();
+//builder.Services.AddScoped<IEmailCache, EmailCache>();
+//builder.Services.AddScoped<ISmsCache, SmsCache>();
 
 //builder.Services.AddHttpClient<IKeycloakClientPayments, KeycloakClientPayments>();
 //builder.Services.AddHttpClient<IKeycloakClientUser, KeycloakClientUser>();
 //builder.Services.AddHttpClient<IKeycloakClientRole, KeycloakClientRole>();
+
+builder.Services.AddHttpClient<IJccRedirectGateway, JccRedirectGateway>();
 
 // Add Application services
 builder.Services.AddApplicationServices();
@@ -125,6 +128,12 @@ if (builder.Environment.IsDevelopment())
 
 var app = builder.Build();
 
+
+// Serve static files from wwwroot
+app.UseStaticFiles();
+
+app.UseRouting();
+
 // Expose a simple health endpoint at /health
 app.MapHealthChecks("/health");
 
@@ -136,10 +145,10 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-using var scope = app.Services.CreateScope();
-var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-dbContext.Database.Migrate();
-Log.Information("Database migrations applied (if any).");
+//using var scope = app.Services.CreateScope();
+//var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+//dbContext.Database.Migrate();
+//Log.Information("Database migrations applied (if any).");
 
 app.UseCors("CorsPolicy");
 app.UseMiddleware<ErrorHandlingMiddleware>();

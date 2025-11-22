@@ -9,3 +9,4 @@
 /volumes
 /src/WebAPI/Logs
 docker-compose.dcproj
+/src/API/Logs

@@ -2,6 +2,7 @@
 //using Payments.Application.Services;
 
 using Microsoft.Extensions.DependencyInjection;
+using Payments.Application.Services;
 
 namespace Payments.Application;
 
@@ -9,7 +10,7 @@ public static class ApplicationServiceRegistration
 {
     public static IServiceCollection AddApplicationServices(this IServiceCollection services)
     {       
-        //services.AddScoped<IPaymentsService, PaymentsService>();
+        services.AddScoped<PaymentAppService, PaymentAppService>();
         //services.AddScoped<IAuthorizationService, AuthorizationService>();
         //services.AddScoped<IUserManagementService, UserManagementService>();
         //services.AddScoped<IRoleManagementService, RoleManagementService>();

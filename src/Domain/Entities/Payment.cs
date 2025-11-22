@@ -1,4 +1,5 @@
 using Payments.Domain.Enums;
+using Payments.Domain.ValueObjects;
 
 namespace Payments.Domain.Entities;
 
@@ -12,7 +13,8 @@ public class Payment
     // JCC order id (returned by register.do)
     public string? GatewayOrderId { get; set; }
 
-    //public Money Amount { get; set; }
+    public decimal AmountValue { get; set; }
+    public string AmountCurrency { get; set; } = default!;
     public PaymentMethod Method { get; set; }
     public PaymentStatus Status { get; set; } = PaymentStatus.Pending;
 

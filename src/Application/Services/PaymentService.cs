@@ -2,7 +2,7 @@
 using System.Security.Cryptography;
 using System.Text;
 
-namespace GlobalPaymentsHpp.Services;
+namespace Payments.Application.Services;
 
 public interface IPaymentService
 {

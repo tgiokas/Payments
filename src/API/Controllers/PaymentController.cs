@@ -1,5 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using GlobalPaymentsHpp.Services;
+using Payments.Application.Services;
 
 namespace GlobalPaymentsHpp.Controllers;
 

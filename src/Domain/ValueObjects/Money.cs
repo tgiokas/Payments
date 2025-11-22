@@ -1,10 +1,11 @@
-﻿//namespace Payments.Domain.ValueObjects;
+﻿namespace Payments.Domain.ValueObjects;
 
-//public record HashedPassword(string Value)
-//{
-//    public HashedPassword : this(Value)
-//    {
-//        if (string.IsNullOrWhiteSpace(Value))
-//            throw new ArgumentException("Password cannot be empty.");
-//}
-//}
+public readonly record struct Money(decimal Amount, string Currency)
+{
+    public static Money Create(decimal amount, string currency)
+    {
+        if (amount <= 0) throw new ArgumentException("Amount must be > 0");
+        if (string.IsNullOrWhiteSpace(currency)) throw new ArgumentException("Currency required");
+        return new Money(amount, currency.ToUpperInvariant());
+    }
+}

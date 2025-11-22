@@ -21,6 +21,9 @@ public class PaymentRepository : IPaymentRepository
     public Task<Payment?> FindByOrderNumberAsync(string orderNumber, CancellationToken ct = default)
         => _dbContext.Payments.FirstOrDefaultAsync(x => x.OrderNumber == orderNumber, ct);
 
+    public Task<Payment?> FindByGatewayOrderIdAsync(string gatewayOrderId, CancellationToken ct = default)
+    => _dbContext.Payments.FirstOrDefaultAsync(x => x.GatewayOrderId == gatewayOrderId, ct);
+
     public Task<Payment?> FindByIdempotencyAsync(string idempotencyKey, string? tenantKey, CancellationToken ct = default)
         => _dbContext.Payments.FirstOrDefaultAsync(x => x.IdempotencyKey == idempotencyKey && x.TenantKey == tenantKey, ct);
 
