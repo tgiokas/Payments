@@ -18,7 +18,7 @@ public class KafkaEmailSender : IEmailSender
 
     public async Task<bool> SendVerificationEmailAsync(string email, string subject, string message)
     {
-        var notification = new NotificationDto
+        var notification = new EmailNotificationDto
         {
             Recipient = email,
             Subject = subject,
@@ -27,7 +27,7 @@ public class KafkaEmailSender : IEmailSender
         };
 
         var messageId = Guid.NewGuid().ToString("N");
-        var envelope = new KafkaMessage<NotificationDto>
+        var envelope = new KafkaMessage<EmailNotificationDto>
         {
             Id = messageId,
             Content = notification,

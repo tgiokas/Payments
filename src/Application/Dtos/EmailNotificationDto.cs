@@ -1,6 +1,6 @@
 ﻿namespace Payments.Application.Dtos;
 
-public class NotificationDto
+public class EmailNotificationDto
 {
     public string Recipient { get; set; } = string.Empty;
     public string Subject { get; set; } = string.Empty;
