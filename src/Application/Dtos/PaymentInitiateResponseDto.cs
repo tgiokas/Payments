@@ -1,8 +1,9 @@
 ﻿namespace Payments.Application.Dtos;
 
-public record PaymentInitiateResponseDto(
-    Guid PaymentId,
-    string GatewayOrderId,
-    string FormUrl,
-    string Status // "Redirected"
-);
+public class PaymentInitiateResponseDto
+{
+    public Guid PaymentId { get; set; }
+    public string GatewayOrderId { get; set; } = default!;
+    public string FormUrl { get; set; } = default!;
+    public string Status { get; set; } = default!;
+}

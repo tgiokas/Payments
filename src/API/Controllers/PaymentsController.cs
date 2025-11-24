@@ -15,7 +15,7 @@ public class PaymentsController : ControllerBase
     // 1) Initiate payment => register.do => return formUrl
     [HttpPost("initiate")]
     public async Task<ActionResult<PaymentInitiateResponseDto>> Initiate(
-        [FromBody] PaymentInitiateRequestDto req,
+        PaymentInitiateRequestDto req,
         CancellationToken ct)
     {
         var idempotencyKey = Request.Headers["X-Idempotency-Key"].ToString();

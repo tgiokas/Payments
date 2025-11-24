@@ -26,20 +26,15 @@ public class JccRedirectGateway : IJccRedirectGateway
         _signer = signer;
     }
 
-    public async Task<RegisterOrderResult> RegisterOrderAsync(Payment payment, CancellationToken ct = default)
+    public async Task<RegisterOrderResult> RegisterOrderAsync(JccRegisterOrderRequestDto request, CancellationToken ct = default)
     {
-        // register.do parameters :contentReference[oaicite:6]{index=6}
-        var baseUrl = _config["Jcc:RestBaseUrl"]; // e.g. https://gateway-test.jcc.com.cy/payment/rest
+        var baseUrl = _config["Jcc:RestBaseUrl"];
         var url = $"{baseUrl}/register.do";
-
-        // amount in minor currency units (e.g., 20.00 EUR => 2000) :contentReference[oaicite:7]{index=7}
-        var minorAmount = ToMinorUnits(payment.AmountValue);
-
-        var currencyNumeric = _config["Jcc:CurrencyNumeric"] ?? "978"; // EUR=978
-
-        var returnUrl = _config["Jcc:ReturnUrl"]; // your API callback/return landing page
+        var minorAmount = ToMinorUnits(request.Amount);
+        var currencyNumeric = _config["Jcc:CurrencyNumeric"] ?? "978";
+        var returnUrl = _config["Jcc:ReturnUrl"];
         var language = _config["Jcc:Language"] ?? "en";
-        var description = $"Order {payment.OrderNumber}";
+        var description = $"Order {request.OrderNumber}";
 
         var form = new Dictionary<string, string>
         {
@@ -47,21 +42,18 @@ public class JccRedirectGateway : IJccRedirectGateway
             ["currency"] = currencyNumeric,
             ["returnUrl"] = returnUrl!,
             ["failUrl"] = returnUrl!,
-            ["orderNumber"] = payment.OrderNumber,
+            ["orderNumber"] = request.OrderNumber,
             ["description"] = description,
             ["language"] = language
         };
 
         ApplyAuth(form);
 
-        // IMPORTANT: build the same body that FormUrlEncodedContent will send
         var body = BuildFormBody(form);
-
         var content = new StringContent(body, Encoding.UTF8, "application/x-www-form-urlencoded");
 
-        _logger.LogInformation("Calling JCC register.do for {OrderNumber}", payment.OrderNumber);
+        _logger.LogInformation("Calling JCC register.do for {OrderNumber}", request.OrderNumber);
 
-        // If signatures are enabled for your merchant, add headers
         if (_signer != null)
         {
             var (xHash, xSig) = _signer.Sign(body);
@@ -78,20 +70,13 @@ public class JccRedirectGateway : IJccRedirectGateway
         if (!resp.IsSuccessStatusCode)
             return new RegisterOrderResult(false, null, null, "HTTP_" + resp.StatusCode, json);
 
-        using var doc = JsonDocument.Parse(json);
-        var root = doc.RootElement;
+        var dto = JsonSerializer.Deserialize<JccRegisterOrderResponseDto>(json);
 
-        // REST Redirect returns "orderId"; MultiECom returns "orderId" too
-        // but the formUrl contains mdOrder. We support both.
-        string? gatewayOrderId =
-            root.TryGetProperty("orderId", out var oid) ? oid.GetString() : null;
-
-        string? formUrl =
-            root.TryGetProperty("formUrl", out var fu) ? fu.GetString() : null;
+        string? gatewayOrderId = dto?.OrderId;
+        string? formUrl = dto?.FormUrl;
 
         if (!string.IsNullOrWhiteSpace(formUrl))
         {
-            // If mdOrder is present in URL, prefer it (MultiECom case)
             var md = ExtractQueryParam(formUrl, "mdOrder");
             if (!string.IsNullOrWhiteSpace(md))
                 gatewayOrderId = md;
@@ -100,15 +85,11 @@ public class JccRedirectGateway : IJccRedirectGateway
         if (!string.IsNullOrWhiteSpace(gatewayOrderId) && !string.IsNullOrWhiteSpace(formUrl))
             return new RegisterOrderResult(true, gatewayOrderId, formUrl, null, null);
 
-        var errorCode = root.TryGetProperty("errorCode", out var ec) ? ec.GetString() : "UNKNOWN";
-        var errorMessage = root.TryGetProperty("errorMessage", out var em) ? em.GetString() : json;
-
-        return new RegisterOrderResult(false, null, null, errorCode, errorMessage);
+        return new RegisterOrderResult(false, null, null, dto?.ErrorCode ?? "UNKNOWN", dto?.ErrorMessage ?? json);
     }
 
     public async Task<OrderStatusResult> GetOrderStatusExtendedAsync(string gatewayOrderId, CancellationToken ct = default)
     {
-        // getOrderStatusExtended.do call per redirect flow :contentReference[oaicite:9]{index=9}
         var baseUrl = _config["Jcc:RestBaseUrl"];
         var url = $"{baseUrl}/getOrderStatusExtended.do";
 
@@ -139,25 +120,17 @@ public class JccRedirectGateway : IJccRedirectGateway
         if (!resp.IsSuccessStatusCode)
             return new OrderStatusResult(false, null, null, "HTTP_" + resp.StatusCode, json);
 
-        using var doc = JsonDocument.Parse(json);
+        var dto = JsonSerializer.Deserialize<JccOrderStatusResponseDto>(json);
 
-        var orderStatus = doc.RootElement.TryGetProperty("orderStatus", out var os)
-            ? os.GetInt32()
-            : (int?)null;
-
-        var actionCode = doc.RootElement.TryGetProperty("actionCode", out var ac)
-            ? ac.GetInt16() 
-            : (int?)null;
-
-
-        // success response may omit error fields
-        var errorCode = doc.RootElement.TryGetProperty("errorCode", out var ec) ? ec.GetString() : null;
-        var errorMessage = doc.RootElement.TryGetProperty("errorMessage", out var em) ? em.GetString() : null;
-
-        return new OrderStatusResult(true, orderStatus, actionCode, errorCode, errorMessage);
+        return new OrderStatusResult(
+            true,
+            dto?.OrderStatus,
+            dto?.ActionCode,
+            dto?.ErrorCode,
+            dto?.ErrorMessage
+        );
     }
 
-    // Auth can be userName/password OR token :contentReference[oaicite:10]{index=10}
     private void ApplyAuth(Dictionary<string, string> form)
     {
         var token = _config["Jcc:Token"];

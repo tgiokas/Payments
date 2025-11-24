@@ -51,7 +51,15 @@ public class PaymentService : IPaymentService
 
         await _repo.AddAsync(payment, ct);
 
-        var reg = await _jcc.RegisterOrderAsync(payment, ct);
+        var jccReq = new JccRegisterOrderRequestDto
+        {
+            OrderNumber = payment.OrderNumber,
+            Amount = payment.AmountValue,
+            Currency = payment.AmountCurrency,
+            Description = $"Order {payment.OrderNumber}"
+        };
+
+        var reg = await _jcc.RegisterOrderAsync(jccReq, ct);
 
         if (!reg.Success || reg.GatewayOrderId is null || reg.FormUrl is null)
         {
@@ -70,12 +78,13 @@ public class PaymentService : IPaymentService
         payment.UpdatedAt = DateTime.UtcNow;
         await _repo.UpdateAsync(payment, ct);
 
-        return new PaymentInitiateResponseDto(
-            payment.Id,
-            reg.GatewayOrderId,
-            reg.FormUrl,
-            payment.Status.ToString()
-        );
+        return new PaymentInitiateResponseDto
+        {
+            PaymentId = payment.Id,
+            GatewayOrderId = reg.GatewayOrderId,
+            FormUrl = reg.FormUrl,
+            Status = payment.Status.ToString()
+        };
     }
 
     /// Step B: Callback/Return verification
