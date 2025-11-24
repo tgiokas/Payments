@@ -1,6 +1,6 @@
 ﻿namespace Payments.Application.Dtos;
 
-public record CreatePaymentRequestDto(
+public record PaymentInitiateRequestDto(
     decimal Amount,
     string Currency,
     string OrderNumber,

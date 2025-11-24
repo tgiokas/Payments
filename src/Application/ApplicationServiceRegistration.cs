@@ -10,7 +10,7 @@ public static class ApplicationServiceRegistration
 {
     public static IServiceCollection AddApplicationServices(this IServiceCollection services)
     {       
-        services.AddScoped<PaymentAppService, PaymentAppService>();
+        services.AddScoped<PaymentService, PaymentService>();
         //services.AddScoped<IAuthorizationService, AuthorizationService>();
         //services.AddScoped<IUserManagementService, UserManagementService>();
         //services.AddScoped<IRoleManagementService, RoleManagementService>();

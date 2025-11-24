@@ -1,159 +1,130 @@
-﻿using Microsoft.Extensions.Configuration;
-using System.Security.Cryptography;
-using System.Text;
+﻿using Payments.Application.Dtos;
+using Payments.Application.Errors;
+using Payments.Domain.Entities;
+using Payments.Domain.Enums;
+using Payments.Domain.Interfaces;
 
 namespace Payments.Application.Services;
 
-public interface IPaymentService
-{
-    PaymentRequest CreatePaymentRequest(PaymentInput input);
-    bool ValidateResponse(PaymentResponse response);
-    string GenerateRequestHash(string timestamp, string merchantId, string orderId, string amount, string currency);
-    string GenerateResponseHash(string timestamp, string merchantId, string orderId, string result, string message, string pasRef, string authCode);
-}
-
 public class PaymentService : IPaymentService
 {
-    private readonly PaymentSettings _settings;
+    private readonly IPaymentRepository _repo;
+    private readonly IJccRedirectGateway _jcc;
 
-    public PaymentService(IConfiguration config)
+    public PaymentService(IPaymentRepository repo, IJccRedirectGateway jcc)
     {
-        _settings = config.GetSection("GlobalPayments").Get<PaymentSettings>()
-            ?? throw new InvalidOperationException("GlobalPayments settings not configured");
+        _repo = repo;
+        _jcc = jcc;
     }
 
-    public PaymentRequest CreatePaymentRequest(PaymentInput input)
+    /// Step A: Initiate payment
+    /// 1) Create Payment (Pending)
+    /// 2) Call register.do
+    /// 3) Store GatewayOrderId + Redirected
+    /// 4) Return formUrl to frontend
+    public async Task<PaymentInitiateResponseDto> InitiateAsync(
+        PaymentInitiateRequestDto req,
+        string idempotencyKey,
+        string? tenantKey,
+        CancellationToken ct = default)
     {
-        var timestamp = DateTime.UtcNow.ToString("yyyyMMddHHmmss");
-        var orderId = input.OrderId ?? GenerateOrderId();
-        var amountInCents = ((int)(input.Amount * 100)).ToString();
-
-        var hash = GenerateRequestHash(timestamp, _settings.MerchantId, orderId, amountInCents, input.Currency);
-
-        return new PaymentRequest
+        // Idempotency replay
+        var existing = await _repo.FindByIdempotencyAsync(idempotencyKey, tenantKey, ct);
+        if (existing is not null && existing.Status == PaymentStatus.Redirected && existing.GatewayOrderId != null)
         {
-            MerchantId = _settings.MerchantId,
-            Account = _settings.Account,
-            OrderId = orderId,
-            Amount = amountInCents,
-            Currency = input.Currency,
-            Timestamp = timestamp,
-            Sha1Hash = hash,
-            AutoSettleFlag = "1",
-            HppVersion = "2",
-            HppChannel = "ECOM",
-            MerchantResponseUrl = input.ResponseUrl ?? _settings.ResponseUrl,
-            // Billing info
-            HppBillingStreet1 = input.BillingStreet1,
-            HppBillingCity = input.BillingCity,
-            HppBillingPostalCode = input.BillingPostalCode,
-            HppBillingCountry = input.BillingCountryCode,
-            HppCustomerEmail = input.CustomerEmail,
-            // Optional fields
-            Comment1 = input.Comment ?? "Payment via .NET 8 Microservice",
-            HppLang = input.Language ?? "en"
+            // We don't have formUrl stored here; you could store it if you want.
+            throw new PaymentException("Payment already initiated with same idempotency key.");
+        }
+
+        var method = Enum.Parse<PaymentMethod>(req.Method, ignoreCase: true);
+
+        var payment = new Payment
+        {
+            OrderNumber = req.OrderNumber,
+            AmountValue = req.Amount,
+            AmountCurrency = req.Currency,
+            Method = method,
+            IdempotencyKey = idempotencyKey,
+            TenantKey = tenantKey,
+            Status = PaymentStatus.Pending
         };
+
+        await _repo.AddAsync(payment, ct);
+
+        var reg = await _jcc.RegisterOrderAsync(payment, ct);
+
+        if (!reg.Success || reg.GatewayOrderId is null || reg.FormUrl is null)
+        {
+            payment.Status = PaymentStatus.Error;
+            payment.ErrorCode = reg.ErrorCode;
+            payment.ErrorMessage = reg.ErrorMessage;
+            payment.UpdatedAt = DateTime.UtcNow;
+            await _repo.UpdateAsync(payment, ct);
+
+            throw new PaymentException($"JCC register.do failed: {reg.ErrorCode} {reg.ErrorMessage}");
+        }
+
+        // MultiECom: reg.GatewayOrderId == mdOrder
+        payment.GatewayOrderId = reg.GatewayOrderId;
+        payment.Status = PaymentStatus.Redirected;
+        payment.UpdatedAt = DateTime.UtcNow;
+        await _repo.UpdateAsync(payment, ct);
+
+        return new PaymentInitiateResponseDto(
+            payment.Id,
+            reg.GatewayOrderId,
+            reg.FormUrl,
+            payment.Status.ToString()
+        );
     }
 
-    public bool ValidateResponse(PaymentResponse response)
+    /// Step B: Callback/Return verification
+    /// JCC redirects user to your returnUrl with orderId :contentReference[oaicite:3]{index=3}
+    /// You must call getOrderStatusExtended.do to verify final status :contentReference[oaicite:4]{index=4}
+    public async Task<PaymentResultDto> ConfirmByGatewayOrderIdAsync(
+        string gatewayOrderId,
+        CancellationToken ct = default)
     {
-        var expectedHash = GenerateResponseHash(
-            response.Timestamp, response.MerchantId, response.OrderId,
-            response.Result, response.Message, response.PasRef, response.AuthCode);
-        return string.Equals(expectedHash, response.Sha1Hash, StringComparison.OrdinalIgnoreCase);
+        var payment = await _repo.FindByGatewayOrderIdAsync(gatewayOrderId, ct);
+        if (payment is null)
+            throw new PaymentException("Payment not found for returned orderId.");
+
+        // getOrderStatusExtended.do (JCC Step 10) :contentReference[oaicite:5]{index=5}
+        var status = await _jcc.GetOrderStatusExtendedAsync(gatewayOrderId, ct);
+
+        if (!status.Success || status.OrderStatus is null)
+        {
+            payment.Status = PaymentStatus.Error;
+            payment.ErrorCode = status.ErrorCode;
+            payment.ErrorMessage = status.ErrorMessage;
+        }
+        else if (status.OrderStatus == 2)
+        {
+            payment.Status = PaymentStatus.Approved;
+        }
+        else
+        {
+            payment.Status = PaymentStatus.Declined;
+        }
+
+        payment.UpdatedAt = DateTime.UtcNow;
+        await _repo.UpdateAsync(payment, ct);
+
+
+        return new PaymentResultDto(
+            payment.Id,
+            payment.OrderNumber,
+            gatewayOrderId,
+            payment.Status.ToString(),
+            status.ActionCode.ToString(),
+            payment.ErrorCode,
+            payment.ErrorMessage
+        );
     }
 
-    public string GenerateRequestHash(string timestamp, string merchantId, string orderId, string amount, string currency)
-    {
-        // Step 1: Hash TIMESTAMP.MERCHANTID.ORDERID.AMOUNT.CURRENCY
-        var step1 = $"{timestamp}.{merchantId}.{orderId}.{amount}.{currency}";
-        var hash1 = ComputeSha1(step1);
-        // Step 2: Hash hash1.secret
-        var step2 = $"{hash1}.{_settings.SharedSecret}";
-        return ComputeSha1(step2);
-    }
+    public async Task<Payment?> GetAsync(Guid id, CancellationToken ct = default)
+        => await _repo.FindByIdAsync(id, ct);
 
-    public string GenerateResponseHash(string timestamp, string merchantId, string orderId, string result, string message, string pasRef, string authCode)
-    {
-        // Step 1: Hash TIMESTAMP.MERCHANTID.ORDERID.RESULT.MESSAGE.PASREF.AUTHCODE
-        var step1 = $"{timestamp}.{merchantId}.{orderId}.{result}.{message}.{pasRef}.{authCode}";
-        var hash1 = ComputeSha1(step1);
-        // Step 2: Hash hash1.secret
-        var step2 = $"{hash1}.{_settings.SharedSecret}";
-        return ComputeSha1(step2);
-    }
-
-    private static string ComputeSha1(string input)
-    {
-        var bytes = Encoding.UTF8.GetBytes(input);
-        var hash = SHA1.HashData(bytes);
-        return Convert.ToHexString(hash).ToLowerInvariant();
-    }
-
-    private static string GenerateOrderId() =>
-        Convert.ToBase64String(Guid.NewGuid().ToByteArray())
-            .Replace("/", "_").Replace("+", "-")[..22];
-}
-
-// Models
-public record PaymentSettings
-{
-    public string MerchantId { get; init; } = "";
-    public string Account { get; init; } = "internet";
-    public string SharedSecret { get; init; } = "";
-    public string ResponseUrl { get; init; } = "";
-    public string HppUrl { get; init; } = "https://pay.sandbox.realexpayments.com/pay";
-}
-
-public record PaymentInput
-{
-    public decimal Amount { get; init; }
-    public string Currency { get; init; } = "EUR";
-    public string? OrderId { get; init; }
-    public string? ResponseUrl { get; init; }
-    public string? BillingStreet1 { get; init; }
-    public string? BillingCity { get; init; }
-    public string? BillingPostalCode { get; init; }
-    public string? BillingCountryCode { get; init; }
-    public string? CustomerEmail { get; init; }
-    public string? Comment { get; init; }
-    public string? Language { get; init; }
-}
-
-public record PaymentRequest
-{
-    public string MerchantId { get; init; } = "";
-    public string Account { get; init; } = "";
-    public string OrderId { get; init; } = "";
-    public string Amount { get; init; } = "";
-    public string Currency { get; init; } = "";
-    public string Timestamp { get; init; } = "";
-    public string Sha1Hash { get; init; } = "";
-    public string AutoSettleFlag { get; init; } = "1";
-    public string HppVersion { get; init; } = "2";
-    public string HppChannel { get; init; } = "ECOM";
-    public string MerchantResponseUrl { get; init; } = "";
-    public string? HppBillingStreet1 { get; init; }
-    public string? HppBillingCity { get; init; }
-    public string? HppBillingPostalCode { get; init; }
-    public string? HppBillingCountry { get; init; }
-    public string? HppCustomerEmail { get; init; }
-    public string? Comment1 { get; init; }
-    public string? HppLang { get; init; }
-}
-
-public record PaymentResponse
-{
-    public string Timestamp { get; init; } = "";
-    public string MerchantId { get; init; } = "";
-    public string OrderId { get; init; } = "";
-    public string Result { get; init; } = "";
-    public string Message { get; init; } = "";
-    public string PasRef { get; init; } = "";
-    public string AuthCode { get; init; } = "";
-    public string Sha1Hash { get; init; } = "";
-    public string? Cvnresult { get; init; }
-    public string? Avspostcoderesult { get; init; }
-    public string? Avsaddressresult { get; init; }
-    public string? Batchid { get; init; }
+    private static Guid ParseGuidFallback(string input)
+        => Guid.TryParse(input, out var g) ? g : Guid.Empty;
 }

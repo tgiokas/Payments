@@ -8,14 +8,14 @@ namespace DMS.Payment.WebAPI.Controllers;
 [Route("payments")]
 public class PaymentsController : ControllerBase
 {
-    private readonly PaymentAppService _app;
+    private readonly PaymentService _app;
 
-    public PaymentsController(PaymentAppService app) => _app = app;
+    public PaymentsController(PaymentService app) => _app = app;
 
     // 1) Initiate payment => register.do => return formUrl
     [HttpPost("initiate")]
-    public async Task<ActionResult<InitiatePaymentResponseDto>> Initiate(
-        [FromBody] CreatePaymentRequestDto req,
+    public async Task<ActionResult<PaymentInitiateResponseDto>> Initiate(
+        [FromBody] PaymentInitiateRequestDto req,
         CancellationToken ct)
     {
         var idempotencyKey = Request.Headers["X-Idempotency-Key"].ToString();

@@ -1,4 +1,5 @@
 ﻿namespace Payments.Application.Dtos;
+
 public record PaymentResultDto(
     Guid PaymentId,
     string OrderNumber,

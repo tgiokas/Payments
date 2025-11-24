@@ -1,6 +1,6 @@
 ﻿namespace Payments.Application.Dtos;
 
-public record InitiatePaymentResponseDto(
+public record PaymentInitiateResponseDto(
     Guid PaymentId,
     string GatewayOrderId,
     string FormUrl,

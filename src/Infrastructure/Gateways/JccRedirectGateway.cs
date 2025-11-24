@@ -146,8 +146,9 @@ public class JccRedirectGateway : IJccRedirectGateway
             : (int?)null;
 
         var actionCode = doc.RootElement.TryGetProperty("actionCode", out var ac)
-            ? ac.GetString()
-            : null;
+            ? ac.GetInt16() 
+            : (int?)null;
+
 
         // success response may omit error fields
         var errorCode = doc.RootElement.TryGetProperty("errorCode", out var ec) ? ec.GetString() : null;
