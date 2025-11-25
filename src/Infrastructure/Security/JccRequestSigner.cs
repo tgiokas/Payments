@@ -8,10 +8,8 @@ public interface IJccRequestSigner
     (string XHash, string XSignature) Sign(string body);
 }
 
-/// <summary>
 /// Signs request bodies per JCC "Calculating hash and signature".
 /// Private key must be the same one whose public cert you uploaded to JCC portal.
-/// </summary>
 public sealed class JccRequestSigner : IJccRequestSigner
 {
     private readonly RSA _rsa;

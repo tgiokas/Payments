@@ -33,7 +33,6 @@ builder.Host.UseSerilog();
 // Add memory cache
 builder.Services.AddMemoryCache();
 
-
 //builder.Services.AddScoped<IEmailCache, EmailCache>();
 //builder.Services.AddScoped<ISmsCache, SmsCache>();
 
@@ -128,7 +127,6 @@ if (builder.Environment.IsDevelopment())
 
 var app = builder.Build();
 
-
 // Serve static files from wwwroot
 app.UseStaticFiles();
 
@@ -145,10 +143,10 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-//using var scope = app.Services.CreateScope();
-//var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-//dbContext.Database.Migrate();
-//Log.Information("Database migrations applied (if any).");
+using var scope = app.Services.CreateScope();
+var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+dbContext.Database.Migrate();
+Log.Information("Database migrations applied (if any).");
 
 app.UseCors("CorsPolicy");
 app.UseMiddleware<ErrorHandlingMiddleware>();
