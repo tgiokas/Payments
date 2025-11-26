@@ -17,6 +17,12 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="ExternalServices\**" />
+    <EmbeddedResource Remove="ExternalServices\**" />
+    <None Remove="ExternalServices\**" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="Community.Microsoft.Extensions.Caching.PostgreSql" Version="5.0.1" />
     <PackageReference Include="Confluent.Kafka" Version="2.11.1" />
     <PackageReference Include="EFCore.NamingConventions" Version="8.0.3" />
@@ -40,7 +46,6 @@
 
   <ItemGroup>
     <Folder Include="Caching\" />
-    <Folder Include="ExternalServices\" />
   </ItemGroup>
 
 </Project>

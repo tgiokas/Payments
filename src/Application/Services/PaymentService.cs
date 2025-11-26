@@ -58,7 +58,6 @@ public class PaymentService : IPaymentService
 
         // Call register.do
         var reg = await _jcc.RegisterOrderAsync(jccReq, ct);
-
        
         if (!reg.Success || reg.GatewayOrderId is null || reg.FormUrl is null)
         {
