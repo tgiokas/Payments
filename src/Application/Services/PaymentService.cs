@@ -17,11 +17,7 @@ public class PaymentService : IPaymentService
         _jcc = jcc;
     }
 
-    /// Step A: Initiate payment
-    /// 1) Create Payment (Pending)
-    /// 2) Call register.do
-    /// 3) Store GatewayOrderId + Redirected
-    /// 4) Return formUrl to frontend
+    /// Step A: Initiate payment   
     public async Task<PaymentInitiateResponseDto> InitiateAsync(
         PaymentInitiateRequestDto req,
         string idempotencyKey,
@@ -38,6 +34,7 @@ public class PaymentService : IPaymentService
 
         var method = Enum.Parse<PaymentMethod>(req.Method, ignoreCase: true);
 
+        // Create Payment (Pending) DB
         var payment = new Payment
         {
             OrderNumber = req.OrderNumber,
@@ -59,8 +56,10 @@ public class PaymentService : IPaymentService
             Description = $"Order {payment.OrderNumber}"
         };
 
+        // Call register.do
         var reg = await _jcc.RegisterOrderAsync(jccReq, ct);
 
+       
         if (!reg.Success || reg.GatewayOrderId is null || reg.FormUrl is null)
         {
             payment.Status = PaymentStatus.Error;
@@ -72,12 +71,14 @@ public class PaymentService : IPaymentService
             throw new PaymentException($"JCC register.do failed: {reg.ErrorCode} {reg.ErrorMessage}");
         }
 
+        // Store GatewayOrderId + Status Redirected
         // MultiECom: reg.GatewayOrderId == mdOrder
         payment.GatewayOrderId = reg.GatewayOrderId;
         payment.Status = PaymentStatus.Redirected;
         payment.UpdatedAt = DateTime.UtcNow;
         await _repo.UpdateAsync(payment, ct);
 
+        // Return formUrl to frontend
         return new PaymentInitiateResponseDto
         {
             PaymentId = payment.Id,
@@ -88,8 +89,7 @@ public class PaymentService : IPaymentService
     }
 
     /// Step B: Callback/Return verification
-    /// JCC redirects user to your returnUrl with orderId :contentReference[oaicite:3]{index=3}
-    /// You must call getOrderStatusExtended.do to verify final status :contentReference[oaicite:4]{index=4}
+    /// JCC redirects user to returnUrl with orderId   
     public async Task<PaymentResultDto> ConfirmByGatewayOrderIdAsync(
         string gatewayOrderId,
         CancellationToken ct = default)
@@ -98,7 +98,7 @@ public class PaymentService : IPaymentService
         if (payment is null)
             throw new PaymentException("Payment not found for returned orderId.");
 
-        // getOrderStatusExtended.do (JCC Step 10) :contentReference[oaicite:5]{index=5}
+        // Call getOrderStatusExtended.do to verify final status       
         var status = await _jcc.GetOrderStatusExtendedAsync(gatewayOrderId, ct);
 
         if (!status.Success || status.OrderStatus is null)
@@ -119,7 +119,6 @@ public class PaymentService : IPaymentService
         payment.UpdatedAt = DateTime.UtcNow;
         await _repo.UpdateAsync(payment, ct);
 
-
         return new PaymentResultDto(
             payment.Id,
             payment.OrderNumber,
@@ -129,11 +128,5 @@ public class PaymentService : IPaymentService
             payment.ErrorCode,
             payment.ErrorMessage
         );
-    }
-
-    public async Task<Payment?> GetAsync(Guid id, CancellationToken ct = default)
-        => await _repo.FindByIdAsync(id, ct);
-
-    private static Guid ParseGuidFallback(string input)
-        => Guid.TryParse(input, out var g) ? g : Guid.Empty;
+    }   
 }

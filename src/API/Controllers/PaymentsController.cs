@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+
 using Payments.Application.Dtos;
 using Payments.Application.Services;
 
@@ -12,7 +13,7 @@ public class PaymentsController : ControllerBase
 
     public PaymentsController(PaymentService app) => _app = app;
 
-    // 1) Initiate payment => register.do => return formUrl
+    /// Initiate payment => register.do => return formUrl
     [HttpPost("initiate")]
     public async Task<ActionResult<PaymentInitiateResponseDto>> Initiate(
         PaymentInitiateRequestDto req,
@@ -28,8 +29,7 @@ public class PaymentsController : ControllerBase
         return Ok(result);
     }
 
-    // 2) ReturnUrl landing from JCC includes orderId :contentReference[oaicite:11]{index=11}
-    // We verify by calling getOrderStatusExtended.do
+    /// JCC redirects user to returnUrl with orderId Verify by calling getOrderStatusExtended.do
     [HttpGet("callback")]
     public async Task<ActionResult<PaymentResultDto>> Callback(
         [FromQuery] string? mdOrder,
@@ -41,7 +41,7 @@ public class PaymentsController : ControllerBase
         if (string.IsNullOrWhiteSpace(gatewayOrderId))
             return BadRequest("mdOrder or orderId is required.");
 
-        var result = await _app.ConfirmByGatewayOrderIdAsync(orderId, ct);
+        var result = await _app.ConfirmByGatewayOrderIdAsync(gatewayOrderId, ct);
 
         // Return a small HTML that:
         // 1) postMessage to opener
@@ -64,12 +64,5 @@ public class PaymentsController : ControllerBase
            """;
 
         return Content(html, "text/html");
-    }
-
-    [HttpGet("{id:guid}")]
-    public async Task<IActionResult> Get(Guid id, CancellationToken ct)
-    {
-        var p = await _app.GetAsync(id, ct);
-        return p is null ? NotFound() : Ok(p);
     }
 }
