@@ -46,23 +46,32 @@ public class PaymentsController : ControllerBase
         // Return a small HTML that:
         // 1) postMessage to opener
         // 2) closes popup
-        var html = $$"""
-           <html>
-             <body>
-               <script>
-                 const payload = {{System.Text.Json.JsonSerializer.Serialize(result)}};
-                 if (window.opener && !window.opener.closed) {
-                     window.opener.postMessage(
-                       { type: "JCC_PAYMENT_RESULT", payload: payload },
-                       "*"
-                     );
-                 }
-                 window.close();
-               </script>
-             </body>
-           </html>
-           """;
+        //var html = $$"""
+        //   <html>
+        //     <body>
+        //       <script>
+        //         const payload = {{System.Text.Json.JsonSerializer.Serialize(result)}};
+        //         if (window.opener && !window.opener.closed) {
+        //             window.opener.postMessage(
+        //               { type: "JCC_PAYMENT_RESULT", payload: payload },
+        //               "*"
+        //             );
+        //         }
+        //         window.close();
+        //       </script>
+        //     </body>
+        //   </html>
+        //   """;
 
-        return Content(html, "text/html");
+        //return Content(html, "text/html");
+
+        // Build redirect URL back to your frontend
+        var redirectUrl =
+            $"http://localhost:5005/test-ui.html" +
+            $"?status={Uri.EscapeDataString(result.Status)}" +
+            $"&order={Uri.EscapeDataString(result.OrderNumber)}" +
+            $"&paymentId={Uri.EscapeDataString(result.PaymentId.ToString())}";
+
+        return Redirect(redirectUrl);
     }
 }

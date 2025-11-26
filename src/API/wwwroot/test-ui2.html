@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -118,6 +118,37 @@
         .error {
             border-left: 4px solid #ff4757;
         }
+
+        /* ==================== MODAL ==================== */
+        #paymentModal {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.65);
+            backdrop-filter: blur(4px);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+        }
+
+            #paymentModal .modal-box {
+                background: #16213e;
+                padding: 2rem;
+                border-radius: 12px;
+                width: 380px;
+                text-align: center;
+                border: 1px solid #00d9ff55;
+            }
+
+            #paymentModal h2 {
+                color: #00ff88;
+                margin-bottom: 1rem;
+            }
+
+            #paymentModal p {
+                color: #ccc;
+                margin-bottom: 1.5rem;
+            }
     </style>
 </head>
 <body>
@@ -156,8 +187,18 @@
         </div>
     </div>
 
+    <!-- ==================== MODAL ==================== -->
+    <div id="paymentModal">
+        <div class="modal-box">
+            <h2>Complete Your Payment</h2>
+            <p>A secure payment window has opened. Please complete the payment.</p>
+            <button class="btn btn-primary" onclick="closePaymentModal()">Close</button>
+        </div>
+    </div>
+
     <script>
         const API_BASE = "http://localhost:5005";
+        let popupRef = null;
 
         async function startPayment() {
             const payload = {
@@ -185,40 +226,42 @@
                 return;
             }
 
-            // Open popup to JCC URL
-            //const popup = window.open(
-            //    data.formUrl,
-            //    "jcc-pay",
-            //    "width=520,height=720"
-            //);
+            // Open JCC popup
+            popupRef = window.open(
+                data.formUrl,
+                "jcc-pay",
+                "width=520,height=720"
+            );
 
-            //// Listen for callback postMessage
-            //window.addEventListener("message", function handler(event) {
-            //    if (event.data?.type !== "JCC_PAYMENT_RESULT") return;
+            // Show modal backdrop
+            showPaymentModal();
 
-            //    window.removeEventListener("message", handler);
+            // Poll for popup close
+            const checkPopup = setInterval(() => {
+                if (!popupRef || popupRef.closed) {
+                    clearInterval(checkPopup);
+                    closePaymentModal();
+                }
+            }, 400);
 
-            //    showResult(event.data.payload, true);
-            //});
+            // Listen for callback messages
+            window.addEventListener("message", function handler(event) {
+                if (event.data?.type !== "JCC_PAYMENT_RESULT") return;
 
-            // Redirect main tab to JCC
-            window.location.href = data.formUrl;
+                window.removeEventListener("message", handler);
+                closePaymentModal();
+
+                showResult(event.data.payload, true);
+            });
         }
 
-        // Read callback results from query string
-        (function parseQueryResult() {
-            const params = new URLSearchParams(window.location.search);
-            if (!params.has("status")) return;
+        function showPaymentModal() {
+            document.getElementById("paymentModal").style.display = "flex";
+        }
 
-            const status = params.get("status");
-            const order = params.get("order");
-            const paymentId = params.get("paymentId");
-
-            showResult(
-                { status, order, paymentId },
-                status === "Approved"
-            );
-        })();
+        function closePaymentModal() {
+            document.getElementById("paymentModal").style.display = "none";
+        }
 
         function showResult(data, success) {
             const card = document.getElementById("resultCard");
