@@ -1,7 +1,5 @@
 using Microsoft.EntityFrameworkCore;
-using Microsoft.IdentityModel.Tokens;
 
-using Community.Microsoft.Extensions.Caching.PostgreSql;
 using Serilog;
 
 using Payments.Api.Middlewares;
@@ -9,10 +7,10 @@ using Payments.Application;
 using Payments.Application.Errors;
 using Payments.Application.Interfaces;
 using Payments.Infrastructure;
-
 using Payments.Infrastructure.Database;
 using Payments.Infrastructure.Messaging;
 using Payments.Infrastructure.Gateways;
+using Payments.Application.Services;
 
 
 var builder = WebApplication.CreateBuilder(args);
@@ -36,34 +34,27 @@ builder.Services.AddMemoryCache();
 //builder.Services.AddScoped<IEmailCache, EmailCache>();
 //builder.Services.AddScoped<ISmsCache, SmsCache>();
 
-//builder.Services.AddHttpClient<IKeycloakClientPayments, KeycloakClientPayments>();
-//builder.Services.AddHttpClient<IKeycloakClientUser, KeycloakClientUser>();
-//builder.Services.AddHttpClient<IKeycloakClientRole, KeycloakClientRole>();
-
 builder.Services.AddHttpClient<IJccRedirectGateway, JccRedirectGateway>();
 
 // Add Application services
-builder.Services.AddApplicationServices();
+builder.Services.AddScoped<PaymentService, PaymentService>();
 
 // Register Database Context
 builder.Services.AddInfrastructureServices(builder.Configuration, "postgresql");
-
-// Register Kafka-based SMS sender
-//builder.Services.AddSingleton<ISmsSender, KafkaSmsSender>();
 
 // Register Kafka-based Email sender
 builder.Services.AddSingleton<IEmailSender, KafkaEmailSender>();
 
 builder.Services.AddSingleton<IMessagePublisher, KafkaPublisher>();
 
-builder.Services.AddDistributedPostgreSqlCache(options =>
-{
-    options.ConnectionString = builder.Configuration.GetConnectionString("DefaultConnection");
-    options.SchemaName = "public";
-    options.TableName = "CacheEntries";
-});
+//builder.Services.AddDistributedPostgreSqlCache(options =>
+//{
+//    options.ConnectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+//    options.SchemaName = "public";
+//    options.TableName = "CacheEntries";
+//});
 
-// ---------- Error Catalog Path ----------
+// Error Catalog Path
 var path = Path.Combine(builder.Environment.ContentRootPath, "errors.json");
 if (!File.Exists(path))
     throw new FileNotFoundException($"errors.json not found at: {path}");
@@ -72,39 +63,6 @@ var errorcat = ErrorCatalog.LoadFromFile(path);
 builder.Services.AddSingleton<IErrorCatalog>(errorcat);
 
 builder.Services.AddControllers();
-
-//// Configure Payments & Keycloak JWT Bearer
-//builder.Services.AddPayments(JwtBearerDefaults.PaymentsScheme)
-//    .AddJwtBearer(options =>
-//    {
-//        options.Authority = builder.Configuration["Keycloak:Authority"];
-//        options.Audience = builder.Configuration["Keycloak:ClientId"];
-//        options.RequireHttpsMetadata = bool.Parse(builder.Configuration["Keycloak:RequireHttpsMetadata"] ?? "false");
-//        options.TokenValidationParameters = new TokenValidationParameters
-//        {
-//            ValidateIssuer = true,
-//            ValidIssuer = builder.Configuration["Keycloak:Authority"],            
-//            ValidateAudience = true,
-//            ValidAudiences = [builder.Configuration["Keycloak:ClientId"]],
-//            ValidateLifetime = true,
-//            ValidateIssuerSigningKey = true,
-//            //RoleClaimType = "http://schemas.microsoft.com/ws/2008/06/identity/claims/role"
-//            //RoleClaimType = "realm_access.roles",
-//            //NameClaimType = "preferred_username"
-//        };
-
-//        // Extract roles from `realm_access` JSON object using System.Text.Json
-//        options.Events = new JwtBearerEvents
-//        {
-//            OnTokenValidated = context =>
-//            {
-//                var roleMapper = context.HttpContext.RequestServices.GetRequiredService<KeycloakRoleMapper>();
-//                roleMapper.MapRolesToClaims(context);
-//                return Task.CompletedTask;
-//            }
-//        };
-
-//    });
 
 // Add CORS policy
 builder.Services.AddCors(options =>
@@ -116,8 +74,6 @@ builder.Services.AddCors(options =>
         policyBuilder.AllowAnyHeader();
     });
 });
-
-// builder.WebHost.UseUrls("http://0.0.0.0:80");
 
 if (builder.Environment.IsDevelopment())
 {

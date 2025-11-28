@@ -34,7 +34,4 @@ COPY --from=publish /app/publish .
 COPY /error-codes/errors.json /app/errors.json
 # ------------------------------------------------------------------
 
-COPY ./certs/keycloak.crt /usr/local/share/ca-certificates/
-RUN update-ca-certificates
-
 ENTRYPOINT ["dotnet", "Payments.Api.dll"]

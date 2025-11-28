@@ -1,5 +1,4 @@
 using Payments.Domain.Enums;
-using Payments.Domain.ValueObjects;
 
 namespace Payments.Domain.Entities;
 

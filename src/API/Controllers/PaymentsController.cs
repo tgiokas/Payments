@@ -3,7 +3,7 @@
 using Payments.Application.Dtos;
 using Payments.Application.Services;
 
-namespace DMS.Payment.WebAPI.Controllers;
+namespace Paymenst.Api.Controllers;
 
 [ApiController]
 [Route("payments")]

@@ -3,8 +3,6 @@ using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
-using Npgsql;
-
 using Payments.Domain.Interfaces;
 using Payments.Infrastructure.Database;
 using Payments.Infrastructure.Repositories;
@@ -17,14 +15,6 @@ public static class InfrastructureServiceRegistration
     {
         var connectionString = configuration.GetConnectionString("DefaultConnection");
 
-        NpgsqlDataSource? dataSource = null;
-        if (databaseProvider.Equals("postgresql", StringComparison.OrdinalIgnoreCase))
-        {
-            var dataSourceBuilder = new NpgsqlDataSourceBuilder(connectionString);
-            dataSourceBuilder.EnableDynamicJson();
-            dataSource = dataSourceBuilder.Build();
-        }
-
         services.AddDbContext<ApplicationDbContext>((sp, options) =>
         {
             options.AddInterceptors(sp.GetServices<ISaveChangesInterceptor>());
@@ -36,7 +26,7 @@ public static class InfrastructureServiceRegistration
                     break;
 
                 case "postgresql":                    
-                    options.UseNpgsql(dataSource).UseSnakeCaseNamingConvention();
+                    options.UseNpgsql(connectionString).UseSnakeCaseNamingConvention();
                     break;
 
                 case "sqlite":
