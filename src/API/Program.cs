@@ -3,15 +3,13 @@ using Microsoft.EntityFrameworkCore;
 using Serilog;
 
 using Payments.Api.Middlewares;
-using Payments.Application;
 using Payments.Application.Errors;
 using Payments.Application.Interfaces;
+using Payments.Application.Services;
 using Payments.Infrastructure;
 using Payments.Infrastructure.Database;
 using Payments.Infrastructure.Messaging;
 using Payments.Infrastructure.Gateways;
-using Payments.Application.Services;
-
 
 var builder = WebApplication.CreateBuilder(args);
 

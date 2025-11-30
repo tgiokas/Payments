@@ -74,11 +74,11 @@ public class JccRedirectGateway : ApiClientBase, IJccRedirectGateway
 
         _logger.LogInformation("Calling JCC register.do for {OrderNumber}", req.OrderNumber);
 
-        var resp = await SendRequestRetryAsync(request, ct);
+        var resp = await SendRequestAsync(request, ct);
         var json = await resp.Content.ReadAsStringAsync(ct);
 
         if (!resp.IsSuccessStatusCode)
-            return new RegisterOrderResult(false, null, null, null, null, "HTTP_" + resp.StatusCode, json);
+            return new RegisterOrderResult(false, null, null, "HTTP_" + resp.StatusCode, json);
 
         var registerOrderDto = JsonSerializer.Deserialize<JccRegisterOrderResponseDto>(json);
 
@@ -93,9 +93,9 @@ public class JccRedirectGateway : ApiClientBase, IJccRedirectGateway
         }
 
         if (!string.IsNullOrWhiteSpace(gatewayOrderId) && !string.IsNullOrWhiteSpace(formUrl))
-            return new RegisterOrderResult(true, gatewayOrderId, formUrl, null, null, null, null);
+            return new RegisterOrderResult(true, gatewayOrderId, formUrl, null, null);
 
-        return new RegisterOrderResult(false, null, null, null, null, registerOrderDto?.ErrorCode ?? "UNKNOWN", registerOrderDto?.ErrorMessage ?? json);
+        return new RegisterOrderResult(false, null, null, registerOrderDto?.ErrorCode ?? "UNKNOWN", registerOrderDto?.ErrorMessage ?? json);
     }
 
     public async Task<OrderStatusResult> GetOrderStatusExtendedAsync(string gatewayOrderId, CancellationToken ct = default)
@@ -124,7 +124,7 @@ public class JccRedirectGateway : ApiClientBase, IJccRedirectGateway
 
         _logger.LogInformation("Calling JCC getOrderStatusExtended.do for {GatewayOrderId}", gatewayOrderId);
 
-        var resp = await SendRequestRetryAsync(request, ct);
+        var resp = await SendRequestAsync(request, ct);
         var json = await resp.Content.ReadAsStringAsync(ct);
 
         if (!resp.IsSuccessStatusCode)

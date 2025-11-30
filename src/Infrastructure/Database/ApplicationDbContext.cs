@@ -13,9 +13,8 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<Payment>(b =>
-        {
-            //b.OwnsOne(x => x.Amount);
-            b.HasIndex(x => new { x.IdempotencyKey, x.TenantKey }).IsUnique();
+        {           
+            b.HasIndex(x => new { x.IdempotencyKey}).IsUnique();
             b.HasIndex(x => x.GatewayOrderId);
             b.HasIndex(x => x.OrderNumber).IsUnique();
         });

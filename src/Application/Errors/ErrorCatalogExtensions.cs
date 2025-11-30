@@ -11,4 +11,3 @@ public static class ErrorCatalogExtensions
         return Result<T>.Fail(e.Message, e.Code);
     }
 }
-

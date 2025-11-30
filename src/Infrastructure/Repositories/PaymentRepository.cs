@@ -24,9 +24,8 @@ public class PaymentRepository : IPaymentRepository
     public Task<Payment?> FindByGatewayOrderIdAsync(string gatewayOrderId, CancellationToken ct = default)
     => _dbContext.Payments.FirstOrDefaultAsync(x => x.GatewayOrderId == gatewayOrderId, ct);
 
-    public Task<Payment?> FindByIdempotencyAsync(string idempotencyKey, string? tenantKey, CancellationToken ct = default)
-        => _dbContext.Payments.FirstOrDefaultAsync(x => x.IdempotencyKey == idempotencyKey && x.TenantKey == tenantKey, ct);
-
+    public Task<Payment?> FindByIdempotencyAsync(string idempotencyKey, CancellationToken ct = default)
+        => _dbContext.Payments.FirstOrDefaultAsync(x => x.IdempotencyKey == idempotencyKey, ct);
 
     public async Task AddAsync(Payment rule, CancellationToken ct = default)
     {
@@ -38,11 +37,5 @@ public class PaymentRepository : IPaymentRepository
     {
         _dbContext.Payments.Update(rule);
         await _dbContext.SaveChangesAsync();
-    }
-
-    //public async Task DeleteAsync(Payment rule)
-    //{
-    //    _dbContext.RolePermissions.Remove(rule);
-    //    await _dbContext.SaveChangesAsync();
-    //}
+    }    
 }

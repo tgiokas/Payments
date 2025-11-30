@@ -6,7 +6,7 @@ public class Payment
 {
     public Guid Id { get; set; } = Guid.NewGuid();
 
-    // Your merchant-side order reference (unique)
+    // Merchant-side order reference (unique)
     public string OrderNumber { get; set; } = default!;
 
     // JCC order id (returned by register.do)
@@ -18,7 +18,6 @@ public class Payment
     public PaymentStatus Status { get; set; } = PaymentStatus.Pending;
 
     public string IdempotencyKey { get; set; } = default!;
-    public string? TenantKey { get; set; }
 
     public string? ErrorCode { get; set; }
     public string? ErrorMessage { get; set; }

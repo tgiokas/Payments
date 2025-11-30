@@ -72,10 +72,6 @@ namespace Payments.Infrastructure.Migrations
                         .HasColumnType("integer")
                         .HasColumnName("status");
 
-                    b.Property<string>("TenantKey")
-                        .HasColumnType("text")
-                        .HasColumnName("tenant_key");
-
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("updated_at");
@@ -86,13 +82,13 @@ namespace Payments.Infrastructure.Migrations
                     b.HasIndex("GatewayOrderId")
                         .HasDatabaseName("ix_payments_gateway_order_id");
 
+                    b.HasIndex("IdempotencyKey")
+                        .IsUnique()
+                        .HasDatabaseName("ix_payments_idempotency_key");
+
                     b.HasIndex("OrderNumber")
                         .IsUnique()
                         .HasDatabaseName("ix_payments_order_number");
-
-                    b.HasIndex("IdempotencyKey", "TenantKey")
-                        .IsUnique()
-                        .HasDatabaseName("ix_payments_idempotency_key_tenant_key");
 
                     b.ToTable("payments", (string)null);
                 });

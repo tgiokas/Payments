@@ -23,7 +23,6 @@ namespace Payments.Infrastructure.Migrations
                     method = table.Column<int>(type: "integer", nullable: false),
                     status = table.Column<int>(type: "integer", nullable: false),
                     idempotency_key = table.Column<string>(type: "text", nullable: false),
-                    tenant_key = table.Column<string>(type: "text", nullable: true),
                     error_code = table.Column<string>(type: "text", nullable: true),
                     error_message = table.Column<string>(type: "text", nullable: true),
                     created_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
@@ -40,9 +39,9 @@ namespace Payments.Infrastructure.Migrations
                 column: "gateway_order_id");
 
             migrationBuilder.CreateIndex(
-                name: "ix_payments_idempotency_key_tenant_key",
+                name: "ix_payments_idempotency_key",
                 table: "payments",
-                columns: new[] { "idempotency_key", "tenant_key" },
+                column: "idempotency_key",
                 unique: true);
 
             migrationBuilder.CreateIndex(

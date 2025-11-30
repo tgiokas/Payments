@@ -20,15 +20,13 @@ public class PaymentService : IPaymentService
     /// Step A: Initiate payment   
     public async Task<PaymentInitiateResponseDto> InitiateAsync(
         PaymentInitiateRequestDto req,
-        string idempotencyKey,
-        string? tenantKey,
+        string idempotencyKey,       
         CancellationToken ct = default)
     {
         // Idempotency replay
-        var existing = await _repo.FindByIdempotencyAsync(idempotencyKey, tenantKey, ct);
+        var existing = await _repo.FindByIdempotencyAsync(idempotencyKey, ct);
         if (existing is not null && existing.Status == PaymentStatus.Redirected && existing.GatewayOrderId != null)
-        {
-            // We don't have formUrl stored here; you could store it if you want.
+        {           
             throw new PaymentException("Payment already initiated with same idempotency key.");
         }
 
@@ -41,8 +39,7 @@ public class PaymentService : IPaymentService
             AmountValue = req.Amount,
             AmountCurrency = req.Currency,
             Method = method,
-            IdempotencyKey = idempotencyKey,
-            TenantKey = tenantKey,
+            IdempotencyKey = idempotencyKey,           
             Status = PaymentStatus.Pending
         };
 
@@ -70,8 +67,7 @@ public class PaymentService : IPaymentService
             throw new PaymentException($"JCC register.do failed: {reg.ErrorCode} {reg.ErrorMessage}");
         }
 
-        // Store GatewayOrderId + Status Redirected
-        // MultiECom: reg.GatewayOrderId == mdOrder
+        // Store GatewayOrderId + Status Redirected    
         payment.GatewayOrderId = reg.GatewayOrderId;
         payment.Status = PaymentStatus.Redirected;
         payment.UpdatedAt = DateTime.UtcNow;

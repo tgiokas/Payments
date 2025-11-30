@@ -3,7 +3,7 @@
 using Payments.Application.Dtos;
 using Payments.Application.Services;
 
-namespace Paymenst.Api.Controllers;
+namespace Payments.Api.Controllers;
 
 [ApiController]
 [Route("payments")]
@@ -15,26 +15,20 @@ public class PaymentsController : ControllerBase
 
     /// Initiate payment => register.do => return formUrl
     [HttpPost("initiate")]
-    public async Task<ActionResult<PaymentInitiateResponseDto>> Initiate(
-        PaymentInitiateRequestDto req,
-        CancellationToken ct)
+    public async Task<ActionResult<PaymentInitiateResponseDto>> Initiate(PaymentInitiateRequestDto req, CancellationToken ct)
     {
         var idempotencyKey = Request.Headers["X-Idempotency-Key"].ToString();
-        var tenantKey = Request.Headers["X-Tenant-Key"].ToString();
 
         if (string.IsNullOrWhiteSpace(idempotencyKey))
             return BadRequest("X-Idempotency-Key is required.");
 
-        var result = await _app.InitiateAsync(req, idempotencyKey, tenantKey, ct);
+        var result = await _app.InitiateAsync(req, idempotencyKey, ct);
         return Ok(result);
     }
 
     /// JCC redirects user to returnUrl with orderId Verify by calling getOrderStatusExtended.do
     [HttpGet("callback")]
-    public async Task<ActionResult<PaymentResultDto>> Callback(
-        [FromQuery] string? mdOrder,
-        [FromQuery] string? orderId,
-       CancellationToken ct)
+    public async Task<ActionResult<PaymentResultDto>> Callback([FromQuery] string? mdOrder, [FromQuery] string? orderId, CancellationToken ct)
     {
         var gatewayOrderId = !string.IsNullOrWhiteSpace(mdOrder) ? mdOrder : orderId;
 
@@ -46,32 +40,33 @@ public class PaymentsController : ControllerBase
         // Return a small HTML that:
         // 1) postMessage to opener
         // 2) closes popup
-        //var html = $$"""
-        //   <html>
-        //     <body>
-        //       <script>
-        //         const payload = {{System.Text.Json.JsonSerializer.Serialize(result)}};
-        //         if (window.opener && !window.opener.closed) {
-        //             window.opener.postMessage(
-        //               { type: "JCC_PAYMENT_RESULT", payload: payload },
-        //               "*"
-        //             );
-        //         }
-        //         window.close();
-        //       </script>
-        //     </body>
-        //   </html>
-        //   """;
+        var html = $$"""
+           <html>
+             <body>
+               <script>
+                 const payload = {{System.Text.Json.JsonSerializer.Serialize(result)}};
+                 if (window.opener && !window.opener.closed) {
+                     window.opener.postMessage(
+                       { type: "JCC_PAYMENT_RESULT", payload: payload },
+                       "*"
+                     );
+                 }
+                 window.close();
+               </script>
+             </body>
+           </html>
+           """;
 
-        //return Content(html, "text/html");
+        return Content(html, "text/html");
 
-        // Build redirect URL back to your frontend
-        var redirectUrl =
-            $"http://localhost:5005/test-ui.html" +
-            $"?status={Uri.EscapeDataString(result.Status)}" +
-            $"&order={Uri.EscapeDataString(result.OrderNumber)}" +
-            $"&paymentId={Uri.EscapeDataString(result.PaymentId.ToString())}";
+        //For Option test-ui.html
+        //// Build redirect URL back to your frontend
+        //var redirectUrl =
+        //    $"http://localhost:5005/test-ui0.html" +
+        //    $"?status={Uri.EscapeDataString(result.Status)}" +
+        //    $"&order={Uri.EscapeDataString(result.OrderNumber)}" +
+        //    $"&paymentId={Uri.EscapeDataString(result.PaymentId.ToString())}";
 
-        return Redirect(redirectUrl);
+        //return Redirect(redirectUrl);
     }
 }
