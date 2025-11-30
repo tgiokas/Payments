@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -119,41 +119,43 @@
             border-left: 4px solid #ff4757;
         }
 
-        /* ==================== MODAL ==================== */
+        /* ================ CENTERED MODAL ================ */
         #paymentModal {
             position: fixed;
             inset: 0;
             background: rgba(0,0,0,0.65);
-            backdrop-filter: blur(4px);
+            backdrop-filter: blur(6px);
             display: none;
-            justify-content: center;
             align-items: center;
+            justify-content: center;
             z-index: 9999;
         }
 
-            #paymentModal .modal-box {
-                background: #16213e;
-                padding: 2rem;
-                border-radius: 12px;
-                width: 380px;
-                text-align: center;
-                border: 1px solid #00d9ff55;
-            }
+        .modal-box {
+            width: 520px;
+            max-width: 90%;
+            background: rgba(255,255,255,0.08);
+            border-radius: 16px;
+            padding: 2rem;
+            border: 1px solid rgba(255,255,255,0.15);
+            text-align: center;
+            animation: fadeIn 0.25s ease-out;
+        }
 
-            #paymentModal h2 {
+            .modal-box h2 {
                 color: #00ff88;
                 margin-bottom: 1rem;
             }
 
-            #paymentModal p {
-                color: #ccc;
+            .modal-box p {
+                color: #ddd;
                 margin-bottom: 1.5rem;
-            }
+            }      
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>💳 JCC Redirect Payment Test</h1>
+        <h1>JCC Modal Pop up Payment Test</h1>
 
         <div class="card">
             <h2>Payment Input</h2>
@@ -170,11 +172,6 @@
                         <option value="EUR">EUR</option>
                     </select>
                 </div>
-
-                <div class="form-group">
-                    <label>Order Number (optional)</label>
-                    <input type="text" id="orderNumber" placeholder="Auto-generated">
-                </div>
             </div>
 
             <br>
@@ -187,11 +184,11 @@
         </div>
     </div>
 
-    <!-- ==================== MODAL ==================== -->
+    <!-- MODAL -->
     <div id="paymentModal">
         <div class="modal-box">
             <h2>Complete Your Payment</h2>
-            <p>A secure payment window has opened. Please complete the payment.</p>
+            <p>A secure payment window has opened. Please finish your payment.</p>
             <button class="btn btn-primary" onclick="closePaymentModal()">Close</button>
         </div>
     </div>
@@ -204,7 +201,7 @@
             const payload = {
                 amount: parseFloat(document.getElementById('amount').value),
                 currency: document.getElementById('currency').value,
-                orderNumber: document.getElementById('orderNumber').value || crypto.randomUUID(),
+                orderNumber: crypto.randomUUID(),
                 method: "card"
             };
 
@@ -224,33 +221,36 @@
             if (!response.ok) {
                 showResult(data, false);
                 return;
-            }
+            }     
 
-            // Open JCC popup
-            popupRef = window.open(
-                data.formUrl,
-                "jcc-pay",
-                "width=520,height=720"
-            );
+             // Open popup to JCC URL
+             const popupWidth = 640;
+             const popupHeight = 860;
+             const left = window.screenX + (window.outerWidth - popupWidth) / 2;
+             const top = window.screenY + (window.outerHeight - popupHeight) / 2;
 
-            // Show modal backdrop
+             popupRef = window.open(
+                 data.formUrl,
+                 "jcc-pay",
+                 `width=${popupWidth},height=${popupHeight},left=${left-100},top=${top}`
+             );
+
             showPaymentModal();
 
-            // Poll for popup close
-            const checkPopup = setInterval(() => {
+            // If popup closes (user cancelled), close modal
+            const interval = setInterval(() => {
                 if (!popupRef || popupRef.closed) {
-                    clearInterval(checkPopup);
+                    clearInterval(interval);
                     closePaymentModal();
                 }
-            }, 400);
+            }, 300);
 
-            // Listen for callback messages
+            // Listen for callback postMessage
             window.addEventListener("message", function handler(event) {
                 if (event.data?.type !== "JCC_PAYMENT_RESULT") return;
 
                 window.removeEventListener("message", handler);
                 closePaymentModal();
-
                 showResult(event.data.payload, true);
             });
         }
@@ -260,7 +260,13 @@
         }
 
         function closePaymentModal() {
-            document.getElementById("paymentModal").style.display = "none";
+            document.getElementById("paymentModal").style.display = "none";           
+
+            if (popupRef && !popupRef.closed) {
+                popupRef.close();
+            }
+
+            popupRef = null;
         }
 
         function showResult(data, success) {
@@ -271,6 +277,12 @@
             area.className = `response-area ${success ? 'success' : 'error'}`;
             area.textContent = JSON.stringify(data, null, 2);
         }
+
+        window.addEventListener("beforeunload", () => {
+            if (popupRef && !popupRef.closed) {
+                popupRef.close();
+            }
+        });
     </script>
 </body>
 </html>

@@ -5,37 +5,35 @@ namespace Payments.Infrastructure.Security;
 
 public interface IJccRequestSigner
 {
-    (string XHash, string XSignature) Sign(string body);
+    (string xHash, string xSignature) Sign(string body);
 }
 
 /// Signs request bodies per JCC "Calculating hash and signature".
 /// Private key must be the same one whose public cert you uploaded to JCC portal.
-public sealed class JccRequestSigner : IJccRequestSigner
+public class JccRequestSigner : IJccRequestSigner
 {
-    private readonly RSA _rsa;
+    private readonly RSA _privateKey;
 
     public JccRequestSigner(string privateKeyPem)
     {
-        _rsa = RSA.Create();
-        _rsa.ImportFromPem(privateKeyPem);
+        _privateKey = RSA.Create();
+        _privateKey.ImportFromPem(privateKeyPem);
     }
 
-    public (string XHash, string XSignature) Sign(string body)
+    public (string xHash, string xSignature) Sign(string body)
     {
-        var bodyBytes = Encoding.UTF8.GetBytes(body);
-
-        // 1) SHA256 hash raw bytes
-        var hashBytes = SHA256.HashData(bodyBytes);
-
-        // 2) Base64 hash => X-Hash
+        // 1) SHA-256 hash (base64)
+        var hashBytes = SHA256.HashData(Encoding.UTF8.GetBytes(body));
         var xHash = Convert.ToBase64String(hashBytes);
 
-        // 3) RSA sign the raw hash bytes with SHA256withRSA
-        var sigBytes = _rsa.SignHash(hashBytes, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
+        // 2) RSA-SHA256 signature
+        var signatureBytes = _privateKey.SignData(
+            Encoding.UTF8.GetBytes(body),
+            HashAlgorithmName.SHA256,
+            RSASignaturePadding.Pkcs1);
 
-        // 4) Base64 signature => X-Signature
-        var xSig = Convert.ToBase64String(sigBytes);
+        var xSignature = Convert.ToBase64String(signatureBytes);
 
-        return (xHash, xSig);
+        return (xHash, xSignature);
     }
 }
