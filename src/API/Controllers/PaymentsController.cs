@@ -37,37 +37,37 @@ public class PaymentsController : ControllerBase
 
         var result = await _app.ConfirmByGatewayOrderIdAsync(gatewayOrderId, ct);
 
-        //// Return a small HTML that:
-        //// 1) postMessage
-        //// 2) closes popup
-        //var html = $$"""
-        //   <html>
-        //     <body>
-        //       <script>
-        //         const payload = {{System.Text.Json.JsonSerializer.Serialize(result)}};
-        //         if (window.opener && !window.opener.closed) {
-        //             window.opener.postMessage(
-        //               { type: "JCC_PAYMENT_RESULT", payload: payload },
-        //               "*"
-        //             );
-        //         }
-        //         window.close();
-        //       </script>
-        //     </body>
-        //   </html>
-        //   """;
+        // Return a small HTML that:
+        // 1) postMessage
+        // 2) closes popup
+        var html = $$"""
+           <html>
+             <body>
+               <script>
+                 const payload = {{System.Text.Json.JsonSerializer.Serialize(result)}};
+                 if (window.opener && !window.opener.closed) {
+                     window.opener.postMessage(
+                       { type: "JCC_PAYMENT_RESULT", payload: payload },
+                       "*"
+                     );
+                 }
+                 window.close();
+               </script>
+             </body>
+           </html>
+           """;
 
-        // return Content(html, "text/html");
+        return Content(html, "text/html");
 
-        var page = "jcc-multiframe.html";
-        // Build redirect URL back to frontend
-        var redirectUrl =
-            $"http://localhost:5005/" + page + 
-            $"?status={Uri.EscapeDataString(result.Status)}" +
-            $"&order={Uri.EscapeDataString(result.OrderNumber)}" +
-            $"&paymentId={Uri.EscapeDataString(result.PaymentId.ToString())}";
+        //var page = "banktransfer2.html";
+        //// Build redirect URL back to frontend
+        //var redirectUrl =
+        //    $"http://localhost:5005/" + page + 
+        //    $"?status={Uri.EscapeDataString(result.Status)}" +
+        //    $"&order={Uri.EscapeDataString(result.OrderNumber)}" +
+        //    $"&paymentId={Uri.EscapeDataString(result.PaymentId.ToString())}";
 
-        return Redirect(redirectUrl);
+        //return Redirect(redirectUrl);
 
         //return Ok(new
         //{
