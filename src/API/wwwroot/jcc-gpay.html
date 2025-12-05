@@ -1,0 +1,376 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JCC Payment Test – Redirect & Widget</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+            background: linear-gradient(135deg,#1a1a2e,#16213e);
+            min-height: 100vh;
+            padding: 2rem;
+            color: #fff;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 2rem;
+            font-size: 2rem;
+            background: linear-gradient(90deg,#00d9ff,#00ff88);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .card {
+            background: rgba(255,255,255,0.05);
+            border-radius: 16px;
+            padding: 2rem;
+            margin-bottom: 1.5rem;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .card h2 {
+            color: #00d9ff;
+            margin-bottom: 1.5rem;
+            font-size: 1.25rem;
+        }
+
+        .card small {
+            color: #999;
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit,minmax(200px,1fr));
+            gap: 1rem;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        label {
+            font-size: 0.85rem;
+            color: #aaa;
+            margin-bottom: 0.5rem;
+        }
+
+        input, select {
+            padding: 0.75rem 1rem;
+            border-radius: 8px;
+            border: 1px solid rgba(255,255,255,0.2);
+            background: rgba(255,255,255,0.05);
+            color: #fff;
+            font-size: 1rem;
+            transition: all 0.3s;
+        }
+
+        input:focus, select:focus {
+            outline: none;
+            border-color: #00d9ff;
+            box-shadow: 0 0 0 3px rgba(0,217,255,0.2);
+        }
+
+        .btn-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.75rem;
+            margin-top: 1rem;
+        }
+
+        .btn {
+            padding: 0.9rem 1.6rem;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+
+        .btn-primary {
+            background: linear-gradient(90deg,#00d9ff,#00ff88);
+            color: #1a1a2e;
+        }
+
+        .btn-secondary {
+            background: rgba(255,255,255,0.1);
+            color: #fff;
+        }
+
+        .btn:hover {
+            transform: translateY(-1px);
+        }
+
+        .response-area {
+            background: #0d1117;
+            border-radius: 8px;
+            padding: 1rem;
+            font-family: 'Monaco','Consolas',monospace;
+            font-size: 0.85rem;
+            max-height: 400px;
+            overflow: auto;
+            white-space: pre-wrap;
+        }
+
+        .success {
+            border-left: 4px solid #00ff88;
+        }
+
+        .error {
+            border-left: 4px solid #ff4757;
+        }
+
+        #widget-container {
+            margin-top: 1rem;
+            min-height: 80px;
+            padding: 1rem 0;
+            border-top: 1px dashed rgba(255,255,255,0.15);
+        }
+
+        .hint {
+            font-size: 0.8rem;
+            color: #aaa;
+            margin-top: 0.5rem;
+        }
+    </style>
+
+    <!-- JCC Payment Widget script (for card + Apple Pay + Google Pay) -->
+    <script
+        src="https://gateway-test.jcc.com.cy/payment/pay-buttons/pay-buttons.js"
+        id="pay-buttons">
+    </script>
+</head>
+<body>
+    <div class="container">
+        <h1>JCC Payment Test (Redirect & Widget)</h1>
+
+        <!-- Shared payment input -->
+        <div class="card">
+            <h2>Payment Input</h2>
+
+            <div class="form-grid">
+                <div class="form-group">
+                    <label>Amount</label>
+                    <input type="number" id="amount" value="20.00" step="0.01">
+                </div>
+
+                <div class="form-group">
+                    <label>Currency</label>
+                    <select id="currency">
+                        <option value="EUR">EUR</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>Order Number (optional)</label>
+                    <input type="text" id="orderNumber" placeholder="Auto-generated">
+                </div>
+            </div>
+
+            <div class="hint">
+                Same amount/order number will be used for both Redirect and Widget flows.
+            </div>
+
+            <div class="btn-row">
+                <button class="btn btn-primary" onclick="startRedirectPayment()">
+                    🔁 Start Redirect Payment (existing flow)
+                </button>
+
+                <button class="btn btn-secondary" onclick="initWidgetFromForm()">
+                    ⚡ Start Payment Widget (Card + Apple/Google Pay)
+                </button>
+            </div>
+        </div>
+
+        <!-- Payment Widget container -->
+        <div class="card">
+            <h2>Payment Widget</h2>
+            <small>
+                This uses <code>pay-buttons.js</code>. It can render Card + Apple Pay + Google Pay
+                directly inside this page on supported devices.
+            </small>
+
+            <div id="widget-container"></div>
+
+            <div class="hint">
+                Make sure:
+                <ul>
+                    <li>JCC has enabled Apple Pay / Google Pay for your merchant.</li>
+                    <li>You set your <code>token</code> and <code>merchantId</code> in the script.</li>
+                    <li><code>returnUrl</code> and <code>failUrl</code> are whitelisted in JCC.</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Result / debug area -->
+        <div class="card" id="resultCard" style="display:none;">
+            <h2>Result / Debug</h2>
+            <pre id="resultArea" class="response-area"></pre>
+        </div>
+    </div>
+
+    <script>
+        // 🔧 Adjust this base URL to point to your Payments API
+        const API_BASE = "http://localhost:5005";
+
+        // 🔧 Replace these with your real values from appsettings / Merchant Portal
+        const JCC_TOKEN = "REPLACE_WITH_YOUR_JCC_TOKEN";          // same value as Jcc:Token
+        const APPLE_MERCHANT_ID = "yourwebsite.com";              // your Apple Pay merchant ID
+        const SUCCESS_URL = "http://localhost:5005/payments/callback";
+        const FAIL_URL = "http://localhost:5005/payments/callback";
+
+        // Utility to log in result card
+        function showResult(data, success) {
+            const card = document.getElementById("resultCard");
+            const area = document.getElementById("resultArea");
+
+            card.style.display = "block";
+            area.className = `response-area ${success ? 'success' : 'error'}`;
+            area.textContent = typeof data === "string"
+                ? data
+                : JSON.stringify(data, null, 2);
+        }
+
+        // 🔁 Existing redirect-based flow (register.do → formUrl → popup)
+        async function startRedirectPayment() {
+            const payload = buildPayloadFromForm();
+
+            // Idempotency for backend
+            const idempotencyKey = crypto.randomUUID();
+
+            const response = await fetch(`${API_BASE}/payments/initiate`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "X-Idempotency-Key": idempotencyKey
+                },
+                body: JSON.stringify(payload)
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                showResult(data, false);
+                return;
+            }
+
+            // Open popup to JCC URL (existing behavior)
+            const popup = window.open(
+                data.formUrl,
+                "jcc-pay",
+                "width=520,height=720"
+            );
+
+            // Listen for callback postMessage (if your hosted page posts back)
+            window.addEventListener("message", function handler(event) {
+                if (event.data?.type !== "JCC_PAYMENT_RESULT") return;
+
+                window.removeEventListener("message", handler);
+                showResult(event.data.payload, true);
+            });
+        }
+
+        function buildPayloadFromForm() {
+            const amount = parseFloat(document.getElementById('amount').value);
+            const currency = document.getElementById('currency').value;
+            const orderInput = document.getElementById('orderNumber').value;
+
+            const orderNumber = orderInput || crypto.randomUUID();
+
+            return {
+                amount: amount,
+                currency: currency,
+                orderNumber: orderNumber,
+                method: "card" // still matches your PaymentService expectation
+            };
+        }
+
+        // ⚡ New: Payment Widget flow (card + Apple Pay + Google Pay)
+        function initWidgetFromForm() {
+            const payload = buildPayloadFromForm();
+
+            if (!window.payButtonsWidget) {
+                alert("JCC Payment Widget script (pay-buttons.js) not loaded.");
+                return;
+            }
+
+            if (!JCC_TOKEN || JCC_TOKEN.startsWith("REPLACE_")) {
+                alert("Please set JCC_TOKEN in test-ui.html to your merchant token.");
+                return;
+            }
+
+            const minorAmount = Math.round(payload.amount * 100); // EUR → cents
+
+            // Initialize / re-init widget inside the container
+            const containerId = "widget-container";
+
+            // Optional: clear previous contents when re-init
+            const container = document.getElementById(containerId);
+            container.innerHTML = "";
+
+            const widget = payButtonsWidget(containerId);
+
+            widget.init({
+                gatewayInfo: {
+                    token: JCC_TOKEN,               // Merchant token (from Jcc:Token)
+                    amount: minorAmount,            // minor units
+                    currency: "978",                // EUR in numeric ISO 4217 format
+                    orderNumber: payload.orderNumber,
+                    returnUrl: SUCCESS_URL,
+                    failUrl: FAIL_URL,
+                    description: `Order ${payload.orderNumber}`,
+                    // Optional: dynamicCallbackUrl if you want JCC callbacks here:
+                    // dynamicCallbackUrl: "https://your-api/payments/jcc-callback"
+                },
+
+                applePay: {
+                    merchantId: APPLE_MERCHANT_ID   // Apple Pay Merchant ID
+                },
+
+                googlePay: {
+                    environment: "TEST"             // "TEST" or "PRODUCTION"
+                },
+
+                // Debug info under buttons (optional)
+                debug: true
+            });
+
+            // You can also attach widget events if needed:
+            // widget.on("payment.success", function (data) {
+            //     showResult({ source: "widget.payment.success", data }, true);
+            // });
+            // widget.on("payment.failed", function (data) {
+            //     showResult({ source: "widget.payment.failed", data }, false);
+            // });
+            // widget.on("widget.error", function (data) {
+            //     showResult({ source: "widget.error", data }, false);
+            // });
+
+            showResult({
+                info: "Payment Widget initialized",
+                orderNumber: payload.orderNumber,
+                amountMajor: payload.amount,
+                amountMinor: minorAmount
+            }, true);
+        }
+    </script>
+</body>
+</html>

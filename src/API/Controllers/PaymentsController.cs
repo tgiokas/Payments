@@ -38,7 +38,7 @@ public class PaymentsController : ControllerBase
         var result = await _app.ConfirmByGatewayOrderIdAsync(gatewayOrderId, ct);
 
         //// Return a small HTML that:
-        //// 1) postMessage to opener
+        //// 1) postMessage
         //// 2) closes popup
         //var html = $$"""
         //   <html>
@@ -59,14 +59,22 @@ public class PaymentsController : ControllerBase
 
         // return Content(html, "text/html");
 
-        //For Option test - ui.html
-        // Build redirect URL back to your frontend
+        var page = "jcc-multiframe.html";
+        // Build redirect URL back to frontend
         var redirectUrl =
-            $"http://localhost:5005/test-ui0.html" +
+            $"http://localhost:5005/" + page + 
             $"?status={Uri.EscapeDataString(result.Status)}" +
             $"&order={Uri.EscapeDataString(result.OrderNumber)}" +
             $"&paymentId={Uri.EscapeDataString(result.PaymentId.ToString())}";
 
         return Redirect(redirectUrl);
+
+        //return Ok(new
+        //{
+        //    message = "Callback processed successfully",
+        //    gatewayOrderId,
+        //    status = result.Status,
+        //    result
+        //});
     }
 }

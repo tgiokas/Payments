@@ -3,5 +3,5 @@
 public enum PaymentMethod
 {
     Card,
-    Transit
+    Bank
 }

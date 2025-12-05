@@ -1,10 +1,9 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Payment Test UI</title>
-
+    <title>JCC Redirect Payment Test UI</title>
     <style>
         * {
             box-sizing: border-box;
@@ -119,75 +118,16 @@
         .error {
             border-left: 4px solid #ff4757;
         }
-
-        /* ========= BANK TRANSFER BOX ========== */
-        #bankTransferBox {
-            margin-top: 1.5rem;
-            display: none;
-            padding: 1.5rem;
-            border-radius: 12px;
-            background: rgba(255,255,255,0.07);
-            border: 1px solid rgba(255,255,255,0.1);
-        }
-
-        .bank-row {
-            margin-bottom: .5rem;
-        }
-
-        .bank-btns a {
-            margin-right: .5rem;
-            display: inline-block;
-            margin-top: .75rem;
-            padding: .6rem 1rem;
-            border-radius: 8px;
-            background: rgba(255,255,255,0.15);
-            color: #fff;
-            text-decoration: none;
-        }
-
-        /* ================= MODAL ================= */
-        #paymentModal {
-            position: fixed;
-            inset: 0;
-            background: rgba(0,0,0,0.65);
-            backdrop-filter: blur(6px);
-            display: none;
-            align-items: center;
-            justify-content: center;
-            z-index: 9999;
-        }
-
-        .modal-box {
-            width: 520px;
-            max-width: 90%;
-            background: rgba(255,255,255,0.08);
-            border-radius: 16px;
-            padding: 2rem;
-            border: 1px solid rgba(255,255,255,0.15);
-            text-align: center;
-        }
-
-            .modal-box h2 {
-                color: #00ff88;
-                margin-bottom: 1rem;
-            }
-
-            .modal-box p {
-                color: #ddd;
-                margin-bottom: 1.5rem;
-            }
     </style>
 </head>
 <body>
-
     <div class="container">
-        <h1>Payment Modal Test</h1>
+        <h1>JCC Pop up Payment Test</h1>
 
         <div class="card">
             <h2>Payment Input</h2>
 
             <div class="form-grid">
-
                 <div class="form-group">
                     <label>Amount</label>
                     <input type="number" id="amount" value="20.00" step="0.01">
@@ -199,34 +139,14 @@
                         <option value="EUR">EUR</option>
                     </select>
                 </div>
-
-                <div class="form-group">
-                    <label>Payment Method</label>
-                    <select id="method" onchange="onMethodChange()">
-                        <option value="card">Card (JCC)</option>
-                        <option value="banktransfer">Bank Transfer</option>
-                    </select>
-                </div>
-            </div>
-
-            <div id="bankTransferBox">
-                <h3>Bank Transfer Details</h3>
-                <div class="bank-row"><b>Bank:</b> Bank of Cyprus</div>
-                <div class="bank-row"><b>Beneficiary:</b> Your Company Ltd</div>
-                <div class="bank-row"><b>IBAN:</b> CY12 3456 7890 0000 0000</div>
-                <div class="bank-row"><b>BIC / SWIFT:</b> BOCYCY2N</div>
-                <div class="bank-row"><b>Reference:</b> (Order number will be shown after initiate)</div>
-
-                <div class="bank-btns">
-                    <a href="https://online.bankofcyprus.com" target="_blank">Bank of Cyprus</a>
-                    <a href="https://www.alpha.gr/e-banking" target="_blank">Alpha Bank</a>
-                    <a href="https://secure.nbg.gr" target="_blank">National Bank</a>
+				<div class="form-group">
+                    <label>Order Number (optional)</label>
+                    <input type="text" id="orderNumber" placeholder="Auto-generated">
                 </div>
             </div>
 
             <br>
             <button class="btn btn-primary" onclick="startPayment()">Start Payment</button>
-
         </div>
 
         <div class="card" id="resultCard" style="display:none;">
@@ -235,33 +155,15 @@
         </div>
     </div>
 
-    <!-- MODAL -->
-    <div id="paymentModal">
-        <div class="modal-box">
-            <h2>Complete Your Payment</h2>
-            <p>The payment popup is open. Please complete your card payment.</p>
-            <button class="btn btn-primary" onclick="closePaymentModal()">Close</button>
-        </div>
-    </div>
-
     <script>
         const API_BASE = "http://localhost:5005";
-        let popupRef = null;
-
-        function onMethodChange() {
-            const method = document.getElementById("method").value;
-            document.getElementById("bankTransferBox").style.display =
-                method === "banktransfer" ? "block" : "none";
-        }
 
         async function startPayment() {
-            const method = document.getElementById("method").value;
-
             const payload = {
                 amount: parseFloat(document.getElementById('amount').value),
                 currency: document.getElementById('currency').value,
-                orderNumber: crypto.randomUUID(),
-                method: method
+                orderNumber: document.getElementById('orderNumber').value || crypto.randomUUID(),
+                method: "card"
             };
 
             const idempotencyKey = crypto.randomUUID();
@@ -282,61 +184,43 @@
                 return;
             }
 
-            // BANK TRANSFER FLOW
-            if (method === "banktransfer") {
-                showBankTransferInfo(data);
-                showResult(data, true);
-                return;
-            }
-
-            // JCC CARD FLOW
+            // Open popup to JCC URL in center of screen
             const popupWidth = 640;
             const popupHeight = 860;
             const left = window.screenX + (window.outerWidth - popupWidth) / 2;
             const top = window.screenY + (window.outerHeight - popupHeight) / 2;
 
-            popupRef = window.open(
+            const popup = window.open(
                 data.formUrl,
                 "jcc-pay",
-                `width=${popupWidth},height=${popupHeight},left=${left-100},top=${top}`
+                `width=${popupWidth},height=${popupHeight},left=${left},top=${top}`
             );
 
-            showPaymentModal();
 
-            const interval = setInterval(() => {
-                if (!popupRef || popupRef.closed) {
-                    clearInterval(interval);
-                    closePaymentModal();
-                }
-            }, 300);
-
+            // Listen for callback postMessage
             window.addEventListener("message", function handler(event) {
                 if (event.data?.type !== "JCC_PAYMENT_RESULT") return;
 
                 window.removeEventListener("message", handler);
-                closePaymentModal();
+
                 showResult(event.data.payload, true);
             });
         }
 
-        function showBankTransferInfo(data) {
-            const box = document.getElementById("bankTransferBox");
+        // Read callback results from query string
+        (function parseQueryResult() {
+            const params = new URLSearchParams(window.location.search);
+            if (!params.has("status")) return;
 
-            const refRow = box.querySelector(".bank-row:nth-child(5)");
-            refRow.innerHTML = `<b>Reference:</b> ${data.paymentId}`;
+            const status = params.get("status");
+            const order = params.get("order");
+            const paymentId = params.get("paymentId");
 
-            box.style.display = "block";
-        }
-
-        function showPaymentModal() {
-            document.getElementById("paymentModal").style.display = "flex";
-        }
-
-        function closePaymentModal() {
-            document.getElementById("paymentModal").style.display = "none";
-            if (popupRef && !popupRef.closed) popupRef.close();
-            popupRef = null;
-        }
+            showResult(
+                { status, order, paymentId },
+                status === "Approved"
+            );
+        })();
 
         function showResult(data, success) {
             const card = document.getElementById("resultCard");
@@ -346,11 +230,6 @@
             area.className = `response-area ${success ? 'success' : 'error'}`;
             area.textContent = JSON.stringify(data, null, 2);
         }
-
-        window.addEventListener("beforeunload", () => {
-            if (popupRef && !popupRef.closed) popupRef.close();
-        });
     </script>
-
 </body>
 </html>

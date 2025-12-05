@@ -32,7 +32,7 @@ public class PaymentService : IPaymentService
 
         var method = Enum.Parse<PaymentMethod>(req.Method, ignoreCase: true);
 
-        // Create Payment (Pending) DB
+        // Create Payment in DB (Pending) 
         var payment = new Payment
         {
             OrderNumber = req.OrderNumber,

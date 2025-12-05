@@ -1,0 +1,473 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JCC Multi-Frame Payment Test</title>
+
+    <!-- JCC Web SDK Multi-Frame script (TEST environment) -->
+    <script src="https://gateway-test.jcc.com.cy/payment/modules/multiframe/main.js"></script>
+
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+            background: linear-gradient(135deg,#1a1a2e,#16213e);
+            min-height: 100vh;
+            padding: 2rem;
+            color: #fff;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 2rem;
+            font-size: 2rem;
+            background: linear-gradient(90deg,#00d9ff,#00ff88);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .card {
+            background: rgba(255,255,255,0.05);
+            border-radius: 16px;
+            padding: 2rem;
+            margin-bottom: 1.5rem;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+
+            .card h2 {
+                color: #00d9ff;
+                margin-bottom: 1.5rem;
+                font-size: 1.25rem;
+            }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit,minmax(200px,1fr));
+            gap: 1rem;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        label {
+            font-size: 0.85rem;
+            color: #aaa;
+            margin-bottom: 0.5rem;
+        }
+
+        input, select {
+            padding: 0.75rem 1rem;
+            border-radius: 8px;
+            border: 1px solid rgba(255,255,255,0.2);
+            background: rgba(255,255,255,0.05);
+            color: #fff;
+            font-size: 1rem;
+            transition: all 0.3s;
+        }
+
+            input:focus, select:focus {
+                outline: none;
+                border-color: #00d9ff;
+                box-shadow: 0 0 0 3px rgba(0,217,255,0.2);
+            }
+
+        .btn {
+            padding: 1rem 2rem;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn-primary {
+            background: linear-gradient(90deg,#00d9ff,#00ff88);
+            color: #1a1a2e;
+        }
+
+            .btn-primary:hover {
+                transform: translateY(-2px);
+            }
+
+        .btn-secondary {
+            background: rgba(255,255,255,0.15);
+            color: #fff;
+            margin-left: 0.75rem;
+        }
+
+            .btn-secondary:hover {
+                background: rgba(255,255,255,0.25);
+            }
+
+        .response-area {
+            background: #0d1117;
+            border-radius: 8px;
+            padding: 1rem;
+            font-family: 'Monaco','Consolas',monospace;
+            font-size: 0.85rem;
+            max-height: 400px;
+            overflow: auto;
+            white-space: pre-wrap;
+        }
+
+        .success {
+            border-left: 4px solid #00ff88;
+        }
+
+        .error {
+            border-left: 4px solid #ff4757;
+        }
+
+        /* ===== Modal styles ===== */
+
+        .modal-backdrop {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.6);
+            display: none; /* hidden by default */
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+            .modal-backdrop.show {
+                display: flex;
+            }
+
+        .modal {
+            background: #ffffff;
+            color: #111827;
+            border-radius: 16px;
+            max-width: 420px;
+            width: 100%;
+            padding: 1.75rem 1.5rem 1.5rem;
+            box-shadow: 0 25px 50px rgba(0,0,0,0.35);
+        }
+
+        .modal-header {
+            margin-bottom: 1rem;
+        }
+
+            .modal-header h2 {
+                margin: 0;
+                font-size: 1.25rem;
+            }
+
+        .modal-body {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+            .modal-body label {
+                color: #374151;
+                font-size: 0.85rem;
+            }
+
+        .field-container {
+            width: 100%;
+            height: 46px;
+            padding: 0;
+            border-radius: 8px;
+            border: 1px solid #d1d5db;
+            background: #f9fafb;
+        }
+
+        .field-container--focus {
+            border-color: #60a5fa;
+            box-shadow: 0 0 0 2px rgba(59,130,246,0.35);
+        }
+
+        .field-container--valid {
+            border-color: #16a34a;
+        }
+
+        .field-container--invalid {
+            border-color: #dc2626;
+        }
+
+        .modal-footer {
+            margin-top: 1.25rem;
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+        }
+
+        #modalError {
+            margin-top: 0.75rem;
+            font-size: 0.8rem;
+            color: #dc2626;
+        }
+
+        #paySpinner {
+            margin-right: 0.5rem;
+            border: 2px solid #e5e7eb;
+            border-top-color: #10b981;
+            border-radius: 999px;
+            width: 14px;
+            height: 14px;
+            animation: spin 0.6s linear infinite;
+            display: none;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>JCC Multi-Frame Payment (Modal)</h1>
+
+        <div class="card">
+            <h2>Payment Input</h2>
+
+            <div class="form-grid">
+                <div class="form-group">
+                    <label>Amount</label>
+                    <input type="number" id="amount" value="20.00" step="0.01">
+                </div>
+
+                <div class="form-group">
+                    <label>Currency</label>
+                    <select id="currency">
+                        <option value="EUR">EUR</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>Order Number (optional)</label>
+                    <input type="text" id="orderNumber" placeholder="Auto-generated">
+                </div>
+            </div>
+
+            <br>
+            <button class="btn btn-primary" onclick="startPayment()">Start Payment</button>
+        </div>
+
+        <div class="card" id="resultCard" style="display:none;">
+            <h2>Result (Web SDK doPayment)</h2>
+            <pre id="resultArea" class="response-area"></pre>
+        </div>
+    </div>
+
+    <!-- ===== Modal with JCC Web SDK fields ===== -->
+    <div id="paymentModalBackdrop" class="modal-backdrop">
+        <div class="modal">
+            <div class="modal-header">
+                <h2>Complete your payment</h2>
+            </div>
+
+            <div class="modal-body">
+                <div>
+                    <label for="pan">Card number</label>
+                    <div id="pan" class="field-container"></div>
+                </div>
+
+                <div>
+                    <label for="expiry">Expiry</label>
+                    <div id="expiry" class="field-container"></div>
+                </div>
+
+                <div>
+                    <label for="cvc">CVC / CVV</label>
+                    <div id="cvc" class="field-container"></div>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <div id="paySpinner"></div>
+                <button id="payButton" class="btn btn-primary" disabled>Pay</button>
+                <button id="cancelButton" class="btn btn-secondary" type="button">Cancel</button>
+            </div>
+
+            <div id="modalError"></div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = "http://localhost:5005";
+
+        let webSdkPaymentForm = null;
+        let currentMdOrder = null;   // gatewayOrderId from /payments/initiate
+
+        async function startPayment() {
+            const payload = {
+                amount: parseFloat(document.getElementById('amount').value),
+                currency: document.getElementById('currency').value,
+                orderNumber: document.getElementById('orderNumber').value || crypto.randomUUID(),
+                method: "card"
+            };
+
+            const idempotencyKey = crypto.randomUUID();
+
+            const response = await fetch(`${API_BASE}/payments/initiate`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "X-Idempotency-Key": idempotencyKey
+                },
+                body: JSON.stringify(payload)
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                showResult(data, false);
+                return;
+            }
+
+            // gatewayOrderId from your backend == mdOrder for Web SDK
+            currentMdOrder = data.gatewayOrderId;
+
+            openPaymentModal(currentMdOrder);
+        }
+
+        function openPaymentModal(mdOrder) {
+            const backdrop = document.getElementById("paymentModalBackdrop");
+            const modalError = document.getElementById("modalError");
+            const payButton = document.getElementById("payButton");
+
+            modalError.textContent = "";
+            payButton.disabled = true;
+
+            backdrop.classList.add("show");
+
+            // If an old instance exists, destroy it first
+            if (webSdkPaymentForm) {
+                try {
+                    webSdkPaymentForm.destroy();
+                } catch (_) {}
+                webSdkPaymentForm = null;
+            }
+
+            // Initialize Web SDK PaymentForm
+            webSdkPaymentForm = new window.PaymentForm({
+                mdOrder: mdOrder,
+                containerClassName: "field-container",
+                language: "en",
+                autoFocus: true,
+                showPanIcon: true,
+                panIconStyle: {
+                    height: "16px",
+                    top: "calc(50% - 8px)",
+                    right: "8px",
+                },
+                fields: {
+                    pan: {
+                        container: document.querySelector("#pan")
+                    },
+                    expiry: {
+                        container: document.querySelector("#expiry")
+                    },
+                    cvc: {
+                        container: document.querySelector("#cvc")
+                    }
+                },
+                onFormValidate: (isValid) => {
+                    // Enable Pay button only when form is valid
+                    payButton.disabled = !isValid;
+                },
+                styles: {
+                    base: {
+                        padding: "0 14px",
+                        color: "black",
+                        fontSize: "16px",
+                        fontFamily: "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif"
+                    },
+                    invalid: {
+                        color: "red"
+                    },
+                    placeholder: {
+                        base: { color: "gray" },
+                        focus: { color: "transparent" }
+                    }
+                }
+            });
+
+            // Call init() as per docs
+            webSdkPaymentForm
+                .init()
+                .then(() => {
+                    // OK, fields are ready
+                })
+                .catch(e => {
+                    modalError.textContent = "Failed to initialize payment form: " + e.message;
+                    payButton.disabled = true;
+                });
+        }
+
+        function closePaymentModal() {
+            const backdrop = document.getElementById("paymentModalBackdrop");
+
+            backdrop.classList.remove("show");
+
+            if (webSdkPaymentForm) {
+                try {
+                    webSdkPaymentForm.destroy();
+                } catch (_) {}
+                webSdkPaymentForm = null;
+            }
+        }
+
+        document.getElementById("cancelButton").addEventListener("click", () => {
+            closePaymentModal();
+        });
+
+        document.getElementById("payButton").addEventListener("click", () => {
+            if (!webSdkPaymentForm) return;
+
+            const payButton = document.getElementById("payButton");
+            const spinner = document.getElementById("paySpinner");
+            const modalError = document.getElementById("modalError");
+
+            payButton.disabled = true;
+            modalError.textContent = "";
+            spinner.style.display = "inline-block";
+
+            // Here you could collect additional fields (cardholderName, email, phone, jsonParams) if you add them
+            webSdkPaymentForm
+                .doPayment({})
+                .then(result => {
+                    // NOTE: Web SDK will also redirect to returnUrl according to mdOrder configuration,
+                    // but we can still inspect the result here for debugging
+                    showResult(result, true);
+                    closePaymentModal();
+                })
+                .catch(e => {
+                    modalError.textContent = e.message || "Payment failed";
+                })
+                .finally(() => {
+                    spinner.style.display = "none";
+                    payButton.disabled = false;
+                });
+        });
+
+        function showResult(data, success) {
+            const card = document.getElementById("resultCard");
+            const area = document.getElementById("resultArea");
+
+            card.style.display = "block";
+            area.className = `response-area ${success ? 'success' : 'error'}`;
+            area.textContent = JSON.stringify(data, null, 2);
+        }
+    </script>
+</body>
+</html>
