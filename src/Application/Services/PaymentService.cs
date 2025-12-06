@@ -84,7 +84,7 @@ public class PaymentService : IPaymentService
     }
 
     /// Step B: Callback/Return verification
-    /// JCC redirects user to returnUrl with orderId   
+    /// JCC redirects to returnUrl with orderId   
     public async Task<PaymentResultDto> ConfirmByGatewayOrderIdAsync(
         string gatewayOrderId,
         CancellationToken ct = default)

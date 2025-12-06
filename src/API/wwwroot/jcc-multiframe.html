@@ -106,7 +106,7 @@
 
         .btn-secondary {
             background: rgba(255,255,255,0.15);
-            color: #fff;
+            color: #000;
             margin-left: 0.75rem;
         }
 
@@ -139,7 +139,7 @@
             position: fixed;
             inset: 0;
             background: rgba(0,0,0,0.6);
-            display: none; /* hidden by default */
+            display: none;
             align-items: center;
             justify-content: center;
             z-index: 1000;
@@ -332,8 +332,7 @@
                 showResult(data, false);
                 return;
             }
-
-            // gatewayOrderId from backend == mdOrder for Web SDK
+           
             currentMdOrder = data.gatewayOrderId;
 
             openPaymentModal(currentMdOrder);
@@ -380,8 +379,7 @@
                         container: document.querySelector("#cvc")
                     }
                 },
-                onFormValidate: (isValid) => {
-                    // Enable Pay button only when form is valid
+                onFormValidate: (isValid) => {                    
                     payButton.disabled = !isValid;
                 },
                 styles: {
@@ -401,7 +399,7 @@
                 }
             });
 
-            // Call init() as per docs
+            // Call init()
             webSdkPaymentForm
                 .init()
                 .then(() => {
@@ -441,12 +439,10 @@
             modalError.textContent = "";
             spinner.style.display = "inline-block";
 
-            // Here you could collect additional fields (cardholderName, email, phone, jsonParams) if you add them
+            // Collect additional fields (cardholderName, email, phone, jsonParams) if we add them
             webSdkPaymentForm
                 .doPayment({})
-                .then(result => {
-                    // NOTE: Web SDK will also redirect to returnUrl according to mdOrder configuration,
-                    // but we can still inspect the result here for debugging
+                .then(result => {                 
                     showResult(result, true);
                     closePaymentModal();
                 })
@@ -459,7 +455,22 @@
                 });
         });
 
-        function showResult(data, success) {
+        // Read callback results from query string
+        (function parseQueryResult() {            
+            const params = new URLSearchParams(window.location.search);
+            if (!params.has("status")) return;
+
+            const status = params.get("status");
+            const order = params.get("order");
+            const paymentId = params.get("paymentId");
+
+            showResult(
+                { status, order, paymentId },
+                status === "Approved"
+            );
+        })();
+
+        function showResult(data, success) {        	
             const card = document.getElementById("resultCard");
             const area = document.getElementById("resultArea");
 

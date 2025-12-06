@@ -26,7 +26,7 @@ public class PaymentsController : ControllerBase
         return Ok(result);
     }
 
-    /// JCC redirects user to returnUrl with orderId Verify by calling getOrderStatusExtended.do
+    /// JCC backend does a redirect to this returnUrl with orderId => Verify by calling getOrderStatusExtended.do
     [HttpGet("callback")]
     public async Task<ActionResult<PaymentResultDto>> Callback([FromQuery] string? mdOrder, [FromQuery] string? orderId, CancellationToken ct)
     {
@@ -37,37 +37,37 @@ public class PaymentsController : ControllerBase
 
         var result = await _app.ConfirmByGatewayOrderIdAsync(gatewayOrderId, ct);
 
-        // Return a small HTML that:
-        // 1) postMessage
-        // 2) closes popup
-        var html = $$"""
-           <html>
-             <body>
-               <script>
-                 const payload = {{System.Text.Json.JsonSerializer.Serialize(result)}};
-                 if (window.opener && !window.opener.closed) {
-                     window.opener.postMessage(
-                       { type: "JCC_PAYMENT_RESULT", payload: payload },
-                       "*"
-                     );
-                 }
-                 window.close();
-               </script>
-             </body>
-           </html>
-           """;
+        //// Return a small HTML that:
+        //// 1) postMessage
+        //// 2) closes popup
+        //var html = $$"""
+        //   <html>
+        //     <body>
+        //       <script>
+        //         const payload = {{System.Text.Json.JsonSerializer.Serialize(result)}};
+        //         if (window.opener && !window.opener.closed) {
+        //             window.opener.postMessage(
+        //               { type: "JCC_PAYMENT_RESULT", payload: payload },
+        //               "*"
+        //             );
+        //         }
+        //         window.close();
+        //       </script>
+        //     </body>
+        //   </html>
+        //   """;
 
-        return Content(html, "text/html");
+        //return Content(html, "text/html");
 
-        //var page = "banktransfer2.html";
-        //// Build redirect URL back to frontend
-        //var redirectUrl =
-        //    $"http://localhost:5005/" + page + 
-        //    $"?status={Uri.EscapeDataString(result.Status)}" +
-        //    $"&order={Uri.EscapeDataString(result.OrderNumber)}" +
-        //    $"&paymentId={Uri.EscapeDataString(result.PaymentId.ToString())}";
+        var page = "jcc-multiframe.html";
+        // Build redirect URL back to frontend
+        var redirectUrl =
+            $"http://localhost:5005/" + page +
+            $"?status={Uri.EscapeDataString(result.Status)}" +
+            $"&order={Uri.EscapeDataString(result.OrderNumber)}" +
+            $"&paymentId={Uri.EscapeDataString(result.PaymentId.ToString())}";
 
-        //return Redirect(redirectUrl);
+        return Redirect(redirectUrl);
 
         //return Ok(new
         //{
