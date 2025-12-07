@@ -1,9 +1,10 @@
 ﻿namespace Payments.Application.Dtos;
 
-public record RegisterOrderResult(
-    bool Success,
-    string? GatewayOrderId,
-    string? FormUrl,
-    string? ErrorCode,
-    string? ErrorMessage
-);
+public class RegisterOrderResult
+{
+    public bool Success { get; set; }
+    public string? GatewayOrderId { get; set; }
+    public string? FormUrl { get; set; }
+    public string? ErrorCode { get; set; }
+    public string? ErrorMessage { get; set; }
+}

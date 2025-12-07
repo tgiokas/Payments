@@ -2,8 +2,8 @@
 
 public class PaymentInitiateRequestDto
 {
-    public string OrderNumber { get; set; } = default!;
+    public string OrderNumber { get; set; } = string.Empty;
     public decimal Amount { get; set; }
-    public string Currency { get; set; } = default!;
-    public string Method { get; set; } = default!;
+    public string Currency { get; set; } = string.Empty;
+    public string Method { get; set; } = string.Empty;
 }

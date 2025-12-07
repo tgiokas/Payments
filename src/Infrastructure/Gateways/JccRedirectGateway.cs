@@ -78,7 +78,14 @@ public class JccRedirectGateway : ApiClientBase, IJccRedirectGateway
         var json = await resp.Content.ReadAsStringAsync(ct);
 
         if (!resp.IsSuccessStatusCode)
-            return new RegisterOrderResult(false, null, null, "HTTP_" + resp.StatusCode, json);
+            return new RegisterOrderResult
+            {
+                Success = false,
+                GatewayOrderId = null,
+                FormUrl = null,
+                ErrorCode = resp.StatusCode.ToString(),
+                ErrorMessage = json
+            };       
 
         var registerOrderDto = JsonSerializer.Deserialize<JccRegisterOrderResponseDto>(json);
 
@@ -93,9 +100,23 @@ public class JccRedirectGateway : ApiClientBase, IJccRedirectGateway
         }
 
         if (!string.IsNullOrWhiteSpace(gatewayOrderId) && !string.IsNullOrWhiteSpace(formUrl))
-            return new RegisterOrderResult(true, gatewayOrderId, formUrl, null, null);
+            return new RegisterOrderResult
+            {
+                Success = true,
+                GatewayOrderId = gatewayOrderId,
+                FormUrl = formUrl,
+                ErrorCode = null,
+                ErrorMessage = null
+            };
 
-        return new RegisterOrderResult(false, null, null, registerOrderDto?.ErrorCode ?? "UNKNOWN", registerOrderDto?.ErrorMessage ?? json);
+        return new RegisterOrderResult
+        {
+            Success = false,
+            GatewayOrderId = null,
+            FormUrl = null,
+            ErrorCode = registerOrderDto?.ErrorCode ?? "UNKNOWN",
+            ErrorMessage = registerOrderDto?.ErrorMessage ?? json
+        };
     }
 
     public async Task<OrderStatusResult> GetOrderStatusExtendedAsync(string gatewayOrderId, CancellationToken ct = default)
@@ -128,17 +149,25 @@ public class JccRedirectGateway : ApiClientBase, IJccRedirectGateway
         var json = await resp.Content.ReadAsStringAsync(ct);
 
         if (!resp.IsSuccessStatusCode)
-            return new OrderStatusResult(false, null, null, "HTTP_" + resp.StatusCode, json);
+            return new OrderStatusResult
+            {
+                Success = false,
+                OrderStatus = null,
+                ActionCode = null,
+                ErrorCode = "HTTP_" + resp.StatusCode,
+                ErrorMessage = json
+            };
 
         var orderStatusDto = JsonSerializer.Deserialize<JccOrderStatusResponseDto>(json);
 
-        return new OrderStatusResult(
-            true,
-            orderStatusDto?.OrderStatus,
-            orderStatusDto?.ActionCode,
-            orderStatusDto?.ErrorCode,
-            orderStatusDto?.ErrorMessage
-        );
+        return new OrderStatusResult
+        {
+            Success = true,
+            OrderStatus = orderStatusDto?.OrderStatus,
+            ActionCode = orderStatusDto?.ActionCode,
+            ErrorCode = orderStatusDto?.ErrorCode,
+            ErrorMessage = orderStatusDto?.ErrorMessage
+        };
     }
 
     private void ApplyAuth(Dictionary<string, string> form)

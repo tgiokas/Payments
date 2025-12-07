@@ -1,5 +1,6 @@
 ﻿using Payments.Application.Dtos;
 using Payments.Application.Errors;
+using Payments.Application.Interfaces;
 using Payments.Domain.Entities;
 using Payments.Domain.Enums;
 using Payments.Domain.Interfaces;
@@ -8,13 +9,15 @@ namespace Payments.Application.Services;
 
 public class PaymentService : IPaymentService
 {
-    private readonly IPaymentRepository _repo;
     private readonly IJccRedirectGateway _jcc;
+    private readonly IPaymentRepository _repo;    
+    private readonly IErrorCatalog _errors;
 
-    public PaymentService(IPaymentRepository repo, IJccRedirectGateway jcc)
+    public PaymentService( IJccRedirectGateway jcc, IPaymentRepository repo, IErrorCatalog errors)
     {
-        _repo = repo;
         _jcc = jcc;
+        _repo = repo;        
+        _errors = errors;
     }
 
     /// Step A: Initiate payment   
@@ -114,14 +117,15 @@ public class PaymentService : IPaymentService
         payment.UpdatedAt = DateTime.UtcNow;
         await _repo.UpdateAsync(payment, ct);
 
-        return new PaymentResultDto(
-            payment.Id,
-            payment.OrderNumber,
-            gatewayOrderId,
-            payment.Status.ToString(),
-            status.ActionCode.ToString(),
-            payment.ErrorCode,
-            payment.ErrorMessage
-        );
+        return new PaymentResultDto
+        {
+            PaymentId = payment.Id,
+            OrderNumber = payment.OrderNumber,
+            GatewayOrderId = gatewayOrderId,
+            Status = payment.Status.ToString(),
+            ActionCode = status.ActionCode?.ToString(),
+            ErrorCode = payment.ErrorCode,
+            ErrorMessage = payment.ErrorMessage
+        };       
     }   
 }

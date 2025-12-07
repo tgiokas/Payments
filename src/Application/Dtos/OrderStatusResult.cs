@@ -1,9 +1,10 @@
 ﻿namespace Payments.Application.Dtos;
 
-public record OrderStatusResult(
-    bool Success,
-    int? OrderStatus,     // 2 success per JCC docs
-    int? ActionCode,
-    string? ErrorCode,
-    string? ErrorMessage
-);
+public class OrderStatusResult
+{
+    public bool Success { get; set; }
+    public int? OrderStatus { get; set; }
+    public int? ActionCode { get; set; }
+    public string? ErrorCode { get; set; }
+    public string? ErrorMessage { get; set; }    
+}
