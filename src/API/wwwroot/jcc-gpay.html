@@ -228,12 +228,10 @@
     </div>
 
     <script>
-        // 🔧 Adjust this base URL to point to your Payments API
         const API_BASE = "http://localhost:5005";
-
-        // 🔧 Replace these with your real values from appsettings / Merchant Portal
-        const JCC_TOKEN = "REPLACE_WITH_YOUR_JCC_TOKEN";          // same value as Jcc:Token
-        const APPLE_MERCHANT_ID = "yourwebsite.com";              // your Apple Pay merchant ID
+       
+        const JCC_TOKEN = "jnba8qomvqt2ec8hel70kqh88o";          // same value as Jcc:Token
+        const APPLE_MERCHANT_ID = "nba";              // your Apple Pay merchant ID
         const SUCCESS_URL = "http://localhost:5005/payments/callback";
         const FAIL_URL = "http://localhost:5005/payments/callback";
 
@@ -249,7 +247,7 @@
                 : JSON.stringify(data, null, 2);
         }
 
-        // 🔁 Existing redirect-based flow (register.do → formUrl → popup)
+        // Existing redirect-based flow (register.do → formUrl → popup)
         async function startRedirectPayment() {
             const payload = buildPayloadFromForm();
 

@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 
 using Payments.Application.Dtos;
+using Payments.Application.Interfaces;
 using Payments.Application.Services;
 
 namespace Payments.Api.Controllers;
@@ -9,26 +10,26 @@ namespace Payments.Api.Controllers;
 [Route("payments")]
 public class PaymentsController : ControllerBase
 {
-    private readonly PaymentService _app;
+    private readonly IPaymentService _app;
 
-    public PaymentsController(PaymentService app) => _app = app;
+    public PaymentsController(IPaymentService app) => _app = app;
 
     /// Initiate payment => register.do => return formUrl
     [HttpPost("initiate")]
-    public async Task<ActionResult<PaymentInitiateResponseDto>> Initiate(PaymentInitiateRequestDto req, CancellationToken ct)
+    public async Task<IActionResult> Initiate(PaymentInitiateRequestDto request, CancellationToken ct)
     {
         var idempotencyKey = Request.Headers["X-Idempotency-Key"].ToString();
 
         if (string.IsNullOrWhiteSpace(idempotencyKey))
             return BadRequest("X-Idempotency-Key is required.");
 
-        var result = await _app.InitiateAsync(req, idempotencyKey, ct);
+        var result = await _app.InitiateAsync(request, idempotencyKey, ct);
         return Ok(result);
     }
 
     /// JCC backend does a redirect to this returnUrl with orderId => Verify by calling getOrderStatusExtended.do
     [HttpGet("callback")]
-    public async Task<ActionResult<PaymentResultDto>> Callback([FromQuery] string? mdOrder, [FromQuery] string? orderId, CancellationToken ct)
+    public async Task<IActionResult> Callback([FromQuery] string? mdOrder, [FromQuery] string? orderId, CancellationToken ct)
     {
         var gatewayOrderId = !string.IsNullOrWhiteSpace(mdOrder) ? mdOrder : orderId;
 
@@ -63,9 +64,9 @@ public class PaymentsController : ControllerBase
         // Build redirect URL back to frontend
         var redirectUrl =
             $"http://localhost:5005/" + page +
-            $"?status={Uri.EscapeDataString(result.Status)}" +
-            $"&order={Uri.EscapeDataString(result.OrderNumber)}" +
-            $"&paymentId={Uri.EscapeDataString(result.PaymentId.ToString())}";
+            $"?status={Uri.EscapeDataString(result.Data?.Status ?? "Error")}" +
+            $"&order={Uri.EscapeDataString(result.Data.OrderNumber)}" +
+            $"&paymentId={Uri.EscapeDataString(result.Data.PaymentId.ToString())}";
 
         return Redirect(redirectUrl);
 

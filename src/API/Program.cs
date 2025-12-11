@@ -29,12 +29,10 @@ builder.Host.UseSerilog();
 // Add memory cache
 builder.Services.AddMemoryCache();
 
-//builder.Services.AddScoped<IEmailCache, EmailCache>();
-//builder.Services.AddScoped<ISmsCache, SmsCache>();
-
+// Register Gateway HTTP Clients
 builder.Services.AddHttpClient<IJccRedirectGateway, JccRedirectGateway>();
 
-// Add Application services
+// Register Application services
 builder.Services.AddScoped<PaymentService, PaymentService>();
 
 // Register Database Context

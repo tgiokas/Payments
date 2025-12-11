@@ -331,9 +331,9 @@
             if (!response.ok) {
                 showResult(data, false);
                 return;
-            }
+            }            
            
-            currentMdOrder = data.gatewayOrderId;
+            currentMdOrder = data.data.gatewayOrderId;
 
             openPaymentModal(currentMdOrder);
         }
@@ -439,7 +439,7 @@
             modalError.textContent = "";
             spinner.style.display = "inline-block";
 
-            // Collect additional fields (cardholderName, email, phone, jsonParams) if we add them
+            // Call doPayment()
             webSdkPaymentForm
                 .doPayment({})
                 .then(result => {                 
