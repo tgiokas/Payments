@@ -33,10 +33,10 @@ builder.Services.AddMemoryCache();
 builder.Services.AddHttpClient<IJccRedirectGateway, JccRedirectGateway>();
 
 // Register Application services
-builder.Services.AddScoped<PaymentService, PaymentService>();
+builder.Services.AddScoped<IPaymentService, PaymentService>();
 
 // Register Database Context
-builder.Services.AddInfrastructureServices(builder.Configuration, "postgresql");
+builder.Services.AddDatabaseServices(builder.Configuration, "postgresql");
 
 // Register Kafka-based Email sender
 builder.Services.AddSingleton<IEmailSender, KafkaEmailSender>();

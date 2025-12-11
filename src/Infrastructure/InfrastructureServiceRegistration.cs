@@ -11,7 +11,7 @@ namespace Payments.Infrastructure;
 
 public static class InfrastructureServiceRegistration
 {
-    public static IServiceCollection AddInfrastructureServices(this IServiceCollection services, IConfiguration configuration, string databaseProvider)
+    public static IServiceCollection AddDatabaseServices(this IServiceCollection services, IConfiguration configuration, string databaseProvider)
     {
         var connectionString = configuration.GetConnectionString("DefaultConnection");
 
