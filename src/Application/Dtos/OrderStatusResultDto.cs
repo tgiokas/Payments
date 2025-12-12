@@ -1,6 +1,6 @@
 ﻿namespace Payments.Application.Dtos;
 
-public class OrderStatusResult
+public class OrderStatusResultDto
 {
     public bool Success { get; set; }
     public int? OrderStatus { get; set; }

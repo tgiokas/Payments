@@ -21,8 +21,8 @@ public class PaymentService : IPaymentService
     }
 
     /// Step A: Initiate payment   
-    public async Task<Result<PaymentInitiateResponseDto>> InitiateAsync(
-        PaymentInitiateRequestDto req,
+    public async Task<Result<PaymentInitiateResponse>> InitiatePaymentAsync(
+        PaymentInitiateRequest request,
         string idempotencyKey,
         CancellationToken ct = default)
     {
@@ -30,17 +30,17 @@ public class PaymentService : IPaymentService
         var existing = await _repo.FindByIdempotencyAsync(idempotencyKey, ct);
         if (existing is not null && existing.Status == PaymentStatus.Redirected && existing.GatewayOrderId != null)
         {
-            return _errors.Fail<PaymentInitiateResponseDto>(ErrorCodes.PAY.PaymentAlreadyInitiated);
+            return _errors.Fail<PaymentInitiateResponse>(ErrorCodes.PAY.PaymentAlreadyInitiated);
         }
 
-        var method = Enum.Parse<PaymentMethod>(req.Method, ignoreCase: true);
+        var method = Enum.Parse<PaymentMethod>(request.Method, ignoreCase: true);
 
         // Create Payment in DB (Pending) 
         var payment = new Payment
         {
-            OrderNumber = req.OrderNumber,
-            AmountValue = req.Amount,
-            AmountCurrency = req.Currency,
+            OrderNumber = request.OrderNumber,
+            AmountValue = request.Amount,
+            AmountCurrency = request.Currency,
             Method = method,
             IdempotencyKey = idempotencyKey,
             Status = PaymentStatus.Pending
@@ -48,7 +48,7 @@ public class PaymentService : IPaymentService
 
         await _repo.AddAsync(payment, ct);
 
-        var jccReq = new JccRegisterOrderRequestDto
+        var jccReq = new JccRegisterOrderRequest
         {
             OrderNumber = payment.OrderNumber,
             Amount = payment.AmountValue,
@@ -67,7 +67,7 @@ public class PaymentService : IPaymentService
             payment.UpdatedAt = DateTime.UtcNow;
             await _repo.UpdateAsync(payment, ct);
 
-            return _errors.Fail<PaymentInitiateResponseDto>(ErrorCodes.PAY.DoPaymentFailed);
+            return _errors.Fail<PaymentInitiateResponse>(ErrorCodes.PAY.DoPaymentFailed);
         }
 
         // Store GatewayOrderId + Status Redirected    
@@ -77,7 +77,7 @@ public class PaymentService : IPaymentService
         await _repo.UpdateAsync(payment, ct);
 
         // Return formUrl to frontend
-        var result = new PaymentInitiateResponseDto
+        var result = new PaymentInitiateResponse
         {
             PaymentId = payment.Id,
             GatewayOrderId = reg.GatewayOrderId,
@@ -85,23 +85,22 @@ public class PaymentService : IPaymentService
             Status = payment.Status.ToString()
         };
 
-        return Result<PaymentInitiateResponseDto>.Ok(result);
+        return Result<PaymentInitiateResponse>.Ok(result);
     }
 
-    /// Step B: Callback/Return verification
-    /// JCC redirects to returnUrl with orderId   
-    public async Task<Result<PaymentResultDto>> ConfirmByGatewayOrderIdAsync(
+    /// Step B: Callback/Return verification - JCC redirects to returnUrl with orderId   
+    public async Task<Result<PaymentConfirmResponse>> ConfirmPaymentAsync(
         string gatewayOrderId,
         CancellationToken ct = default)
     {
         var payment = await _repo.FindByGatewayOrderIdAsync(gatewayOrderId, ct);
         if (payment is null)
         {
-            return _errors.Fail<PaymentResultDto>(ErrorCodes.PAY.PaymentNotFound);
+            return _errors.Fail<PaymentConfirmResponse>(ErrorCodes.PAY.PaymentNotFound);
         }
 
         // Call getOrderStatusExtended.do to verify final status       
-        var status = await _jcc.GetOrderStatusExtendedAsync(gatewayOrderId, ct);
+        var status = await _jcc.GetOrderStatusAsync(gatewayOrderId, ct);
 
         if (!status.Success || status.OrderStatus is null)
         {
@@ -121,7 +120,7 @@ public class PaymentService : IPaymentService
         payment.UpdatedAt = DateTime.UtcNow;
         await _repo.UpdateAsync(payment, ct);
 
-        var result = new PaymentResultDto
+        var result = new PaymentConfirmResponse
         {
             PaymentId = payment.Id,
             OrderNumber = payment.OrderNumber,
@@ -132,6 +131,6 @@ public class PaymentService : IPaymentService
             ErrorMessage = payment.ErrorMessage
         };
 
-        return Result<PaymentResultDto>.Ok(result);
+        return Result<PaymentConfirmResponse>.Ok(result);
     }
 }

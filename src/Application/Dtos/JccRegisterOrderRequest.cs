@@ -1,6 +1,6 @@
 ﻿namespace Payments.Application.Dtos;
 
-public class JccRegisterOrderRequestDto
+public class JccRegisterOrderRequest
 {
     public string OrderNumber { get; set; } = string.Empty;
     public decimal Amount { get; set; }             // major units

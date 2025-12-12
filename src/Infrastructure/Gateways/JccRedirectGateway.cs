@@ -37,7 +37,7 @@ public class JccRedirectGateway : ApiClientBase, IJccRedirectGateway
         _defaultLanguage = _config["Jcc:Language"] ?? "en";
     }
 
-    public async Task<RegisterOrderResult> RegisterOrderAsync(JccRegisterOrderRequestDto req, CancellationToken ct = default)
+    public async Task<RegisterOrderResultDto> RegisterOrderAsync(JccRegisterOrderRequest req, CancellationToken ct = default)
     {
         var url = $"{_baseUrl}/register.do";
 
@@ -78,7 +78,7 @@ public class JccRedirectGateway : ApiClientBase, IJccRedirectGateway
         var json = await resp.Content.ReadAsStringAsync(ct);
 
         if (!resp.IsSuccessStatusCode)
-            return new RegisterOrderResult
+            return new RegisterOrderResultDto
             {
                 Success = false,
                 GatewayOrderId = null,
@@ -87,7 +87,7 @@ public class JccRedirectGateway : ApiClientBase, IJccRedirectGateway
                 ErrorMessage = json
             };       
 
-        var registerOrderDto = JsonSerializer.Deserialize<JccRegisterOrderResponseDto>(json);
+        var registerOrderDto = JsonSerializer.Deserialize<JccRegisterOrderResponse>(json);
 
         string? gatewayOrderId = registerOrderDto?.OrderId;
         string? formUrl = registerOrderDto?.FormUrl;
@@ -100,7 +100,7 @@ public class JccRedirectGateway : ApiClientBase, IJccRedirectGateway
         }
 
         if (!string.IsNullOrWhiteSpace(gatewayOrderId) && !string.IsNullOrWhiteSpace(formUrl))
-            return new RegisterOrderResult
+            return new RegisterOrderResultDto
             {
                 Success = true,
                 GatewayOrderId = gatewayOrderId,
@@ -109,7 +109,7 @@ public class JccRedirectGateway : ApiClientBase, IJccRedirectGateway
                 ErrorMessage = null
             };
 
-        return new RegisterOrderResult
+        return new RegisterOrderResultDto
         {
             Success = false,
             GatewayOrderId = null,
@@ -119,7 +119,7 @@ public class JccRedirectGateway : ApiClientBase, IJccRedirectGateway
         };
     }
 
-    public async Task<OrderStatusResult> GetOrderStatusExtendedAsync(string gatewayOrderId, CancellationToken ct = default)
+    public async Task<OrderStatusResultDto> GetOrderStatusAsync(string gatewayOrderId, CancellationToken ct = default)
     {
         var url = $"{_baseUrl}/getOrderStatusExtended.do";
 
@@ -149,7 +149,7 @@ public class JccRedirectGateway : ApiClientBase, IJccRedirectGateway
         var json = await resp.Content.ReadAsStringAsync(ct);
 
         if (!resp.IsSuccessStatusCode)
-            return new OrderStatusResult
+            return new OrderStatusResultDto
             {
                 Success = false,
                 OrderStatus = null,
@@ -158,9 +158,9 @@ public class JccRedirectGateway : ApiClientBase, IJccRedirectGateway
                 ErrorMessage = json
             };
 
-        var orderStatusDto = JsonSerializer.Deserialize<JccOrderStatusResponseDto>(json);
+        var orderStatusDto = JsonSerializer.Deserialize<JccOrderStatusResponse>(json);
 
-        return new OrderStatusResult
+        return new OrderStatusResultDto
         {
             Success = true,
             OrderStatus = orderStatusDto?.OrderStatus,

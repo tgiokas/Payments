@@ -2,7 +2,6 @@
 
 using Payments.Application.Dtos;
 using Payments.Application.Interfaces;
-using Payments.Application.Services;
 
 namespace Payments.Api.Controllers;
 
@@ -16,14 +15,14 @@ public class PaymentsController : ControllerBase
 
     /// Initiate payment => register.do => return formUrl
     [HttpPost("initiate")]
-    public async Task<IActionResult> Initiate(PaymentInitiateRequestDto request, CancellationToken ct)
+    public async Task<IActionResult> Initiate(PaymentInitiateRequest request, CancellationToken ct)
     {
         var idempotencyKey = Request.Headers["X-Idempotency-Key"].ToString();
 
         if (string.IsNullOrWhiteSpace(idempotencyKey))
             return BadRequest("X-Idempotency-Key is required.");
 
-        var result = await _app.InitiateAsync(request, idempotencyKey, ct);
+        var result = await _app.InitiatePaymentAsync(request, idempotencyKey, ct);
         return Ok(result);
     }
 
@@ -36,31 +35,9 @@ public class PaymentsController : ControllerBase
         if (string.IsNullOrWhiteSpace(gatewayOrderId))
             return BadRequest("mdOrder or orderId is required.");
 
-        var result = await _app.ConfirmByGatewayOrderIdAsync(gatewayOrderId, ct);
+        var result = await _app.ConfirmPaymentAsync(gatewayOrderId, ct);        
 
-        //// Return a small HTML that:
-        //// 1) postMessage
-        //// 2) closes popup
-        //var html = $$"""
-        //   <html>
-        //     <body>
-        //       <script>
-        //         const payload = {{System.Text.Json.JsonSerializer.Serialize(result)}};
-        //         if (window.opener && !window.opener.closed) {
-        //             window.opener.postMessage(
-        //               { type: "JCC_PAYMENT_RESULT", payload: payload },
-        //               "*"
-        //             );
-        //         }
-        //         window.close();
-        //       </script>
-        //     </body>
-        //   </html>
-        //   """;
-
-        //return Content(html, "text/html");
-
-        var page = "jcc-multiframe.html";
+        var page = "jcc-payments.html";
         // Build redirect URL back to frontend
         var redirectUrl =
             $"http://localhost:5005/" + page +

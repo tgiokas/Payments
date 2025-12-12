@@ -1,6 +1,6 @@
 ﻿namespace Payments.Application.Dtos;
 
-public class RegisterOrderResult
+public class RegisterOrderResultDto
 {
     public bool Success { get; set; }
     public string? GatewayOrderId { get; set; }

@@ -1,6 +1,6 @@
 ﻿namespace Payments.Application.Dtos;
 
-public class PaymentInitiateResponseDto
+public class PaymentInitiateResponse
 {
     public Guid PaymentId { get; set; }
     public string GatewayOrderId { get; set; } = string.Empty;

@@ -2,7 +2,7 @@
 
 namespace Payments.Application.Dtos;
 
-public class JccRegisterOrderResponseDto
+public class JccRegisterOrderResponse
 {
     [JsonPropertyName("orderId")]
     public string? OrderId { get; set; }

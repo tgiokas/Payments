@@ -1,6 +1,6 @@
 ﻿namespace Payments.Application.Dtos;
 
-public class PaymentInitiateRequestDto
+public class PaymentInitiateRequest
 {
     public string OrderNumber { get; set; } = string.Empty;
     public decimal Amount { get; set; }
