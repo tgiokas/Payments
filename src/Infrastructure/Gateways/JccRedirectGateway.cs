@@ -2,6 +2,7 @@
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
+using System.Web;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 
@@ -186,7 +187,7 @@ public class JccRedirectGateway : ApiClientBase, IJccRedirectGateway
     private static string? ExtractQueryParam(string url, string key)
     {
         var uri = new Uri(url);
-        var query = System.Web.HttpUtility.ParseQueryString(uri.Query);
+        var query = HttpUtility.ParseQueryString(uri.Query);
         return query[key];
     }
 

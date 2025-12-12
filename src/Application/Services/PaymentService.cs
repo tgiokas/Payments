@@ -57,13 +57,13 @@ public class PaymentService : IPaymentService
         };
 
         // Call register.do
-        var reg = await _jcc.RegisterOrderAsync(jccReq, ct);
+        var registerOrderDto = await _jcc.RegisterOrderAsync(jccReq, ct);
 
-        if (!reg.Success || reg.GatewayOrderId is null || reg.FormUrl is null)
+        if (!registerOrderDto.Success || registerOrderDto.GatewayOrderId is null || registerOrderDto.FormUrl is null)
         {
             payment.Status = PaymentStatus.Error;
-            payment.ErrorCode = reg.ErrorCode;
-            payment.ErrorMessage = reg.ErrorMessage;
+            payment.ErrorCode = registerOrderDto.ErrorCode;
+            payment.ErrorMessage = registerOrderDto.ErrorMessage;
             payment.UpdatedAt = DateTime.UtcNow;
             await _repo.UpdateAsync(payment, ct);
 
@@ -71,7 +71,7 @@ public class PaymentService : IPaymentService
         }
 
         // Store GatewayOrderId + Status Redirected    
-        payment.GatewayOrderId = reg.GatewayOrderId;
+        payment.GatewayOrderId = registerOrderDto.GatewayOrderId;
         payment.Status = PaymentStatus.Redirected;
         payment.UpdatedAt = DateTime.UtcNow;
         await _repo.UpdateAsync(payment, ct);
@@ -80,8 +80,8 @@ public class PaymentService : IPaymentService
         var result = new PaymentInitiateResponse
         {
             PaymentId = payment.Id,
-            GatewayOrderId = reg.GatewayOrderId,
-            FormUrl = reg.FormUrl,
+            GatewayOrderId = registerOrderDto.GatewayOrderId,
+            FormUrl = registerOrderDto.FormUrl,
             Status = payment.Status.ToString()
         };
 
@@ -100,15 +100,15 @@ public class PaymentService : IPaymentService
         }
 
         // Call getOrderStatusExtended.do to verify final status       
-        var status = await _jcc.GetOrderStatusAsync(gatewayOrderId, ct);
+        var orderStatusDto = await _jcc.GetOrderStatusAsync(gatewayOrderId, ct);
 
-        if (!status.Success || status.OrderStatus is null)
+        if (!orderStatusDto.Success || orderStatusDto.OrderStatus is null)
         {
             payment.Status = PaymentStatus.Error;
-            payment.ErrorCode = status.ErrorCode;
-            payment.ErrorMessage = status.ErrorMessage;
+            payment.ErrorCode = orderStatusDto.ErrorCode;
+            payment.ErrorMessage = orderStatusDto.ErrorMessage;
         }
-        else if (status.OrderStatus == 2)
+        else if (orderStatusDto.OrderStatus == 2)
         {
             payment.Status = PaymentStatus.Approved;
         }
@@ -126,7 +126,7 @@ public class PaymentService : IPaymentService
             OrderNumber = payment.OrderNumber,
             GatewayOrderId = gatewayOrderId,
             Status = payment.Status.ToString(),
-            ActionCode = status.ActionCode?.ToString(),
+            ActionCode = orderStatusDto.ActionCode?.ToString(),
             ErrorCode = payment.ErrorCode,
             ErrorMessage = payment.ErrorMessage
         };
