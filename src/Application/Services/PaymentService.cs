@@ -64,7 +64,7 @@ public class PaymentService : IPaymentService
             payment.Status = PaymentStatus.Error;
             payment.ErrorCode = registerOrderDto.ErrorCode;
             payment.ErrorMessage = registerOrderDto.ErrorMessage;
-            payment.UpdatedAt = DateTime.UtcNow;
+            payment.ModifiedAt = DateTime.UtcNow;
             await _repo.UpdateAsync(payment, ct);
 
             return _errors.Fail<PaymentInitiateResponse>(ErrorCodes.PAY.DoPaymentFailed);
@@ -73,7 +73,7 @@ public class PaymentService : IPaymentService
         // Store GatewayOrderId + Status Redirected    
         payment.GatewayOrderId = registerOrderDto.GatewayOrderId;
         payment.Status = PaymentStatus.Redirected;
-        payment.UpdatedAt = DateTime.UtcNow;
+        payment.ModifiedAt = DateTime.UtcNow;
         await _repo.UpdateAsync(payment, ct);
 
         // Return formUrl to frontend
@@ -117,7 +117,7 @@ public class PaymentService : IPaymentService
             payment.Status = PaymentStatus.Declined;
         }
 
-        payment.UpdatedAt = DateTime.UtcNow;
+        payment.ModifiedAt = DateTime.UtcNow;
         await _repo.UpdateAsync(payment, ct);
 
         var result = new PaymentConfirmResponse
