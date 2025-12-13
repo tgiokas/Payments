@@ -27,13 +27,45 @@ public class PaymentService : IPaymentService
         CancellationToken ct = default)
     {
         // Idempotency replay
-        var existing = await _repo.FindByIdempotencyAsync(idempotencyKey, ct);
-        if (existing is not null && existing.Status == PaymentStatus.Redirected && existing.GatewayOrderId != null)
+        var existingIdempotency = await _repo.FindByIdempotencyAsync(idempotencyKey, ct);
+        if (existingIdempotency is not null)
         {
+            if (existingIdempotency.Status == PaymentStatus.Redirected &&
+                !string.IsNullOrWhiteSpace(existingIdempotency.GatewayOrderId))
+            {
+                return Result<PaymentInitiateResponse>.Ok(new PaymentInitiateResponse
+                {
+                    PaymentId = existingIdempotency.Id,
+                    GatewayOrderId = existingIdempotency.GatewayOrderId!,
+                    FormUrl = string.Empty, // frontend already has it
+                    Status = existingIdempotency.Status.ToString()
+                });
+            }
+
             return _errors.Fail<PaymentInitiateResponse>(ErrorCodes.PAY.PaymentAlreadyInitiated);
         }
 
-        var method = Enum.Parse<PaymentMethod>(request.Method, ignoreCase: true);
+        // OrderNumber uniqueness protection
+        var existingOrder = await _repo.FindByOrderNumberAsync(request.OrderNumber, ct);
+        if (existingOrder is not null)
+        {
+            // Already successfully paid
+            if (existingOrder.Status == PaymentStatus.Approved)
+                return _errors.Fail<PaymentInitiateResponse>(ErrorCodes.PAY.OrderAlreadyPaid);
+
+            // User never completed payment --> allow retry
+            if (existingOrder.Status == PaymentStatus.Error ||
+                existingOrder.Status == PaymentStatus.Declined)
+                return _errors.Fail<PaymentInitiateResponse>(ErrorCodes.PAY.OrderPaymentFailedPreviously);
+
+            // Redirect already issued --> do NOT create new one
+            if (existingOrder.Status == PaymentStatus.Redirected)
+                return _errors.Fail<PaymentInitiateResponse>(ErrorCodes.PAY.PaymentAlreadyInitiated);
+        }
+
+        // Parse & validate method
+        if (!Enum.TryParse<PaymentMethod>(request.Method, true, out var method))
+            return _errors.Fail<PaymentInitiateResponse>(ErrorCodes.PAY.InvalidPaymentMethod);
 
         // Create Payment in DB (Pending) 
         var payment = new Payment
@@ -49,6 +81,7 @@ public class PaymentService : IPaymentService
 
         await _repo.AddAsync(payment, ct);
 
+        // Call JCC register.do
         var jccReq = new JccRegisterOrderRequest
         {
             OrderNumber = payment.OrderNumber,
@@ -57,50 +90,56 @@ public class PaymentService : IPaymentService
             Description = $"Order {payment.OrderNumber}"
         };
 
-        // Call register.do
-        var registerOrderDto = await _jcc.RegisterOrderAsync(jccReq, ct);
+        var register = await _jcc.RegisterOrderAsync(jccReq, ct);
 
-        if (!registerOrderDto.Success || registerOrderDto.GatewayOrderId is null || registerOrderDto.FormUrl is null)
+        if (!register.Success || register.GatewayOrderId is null || register.FormUrl is null)
         {
             payment.Status = PaymentStatus.Error;
-            payment.JccErrorCode = registerOrderDto.ErrorCode;
-            payment.JccErrorMessage = registerOrderDto.ErrorMessage;
+            payment.JccErrorCode = register.ErrorCode;
+            payment.JccErrorMessage = register.ErrorMessage;
             payment.ModifiedAt = DateTime.UtcNow;
+
             await _repo.UpdateAsync(payment, ct);
 
             return _errors.Fail<PaymentInitiateResponse>(ErrorCodes.PAY.DoPaymentFailed);
         }
 
         // Store GatewayOrderId + Status Redirected    
-        payment.GatewayOrderId = registerOrderDto.GatewayOrderId;
+        payment.GatewayOrderId = register.GatewayOrderId;
         payment.Status = PaymentStatus.Redirected;
         payment.ModifiedAt = DateTime.UtcNow;
+
         await _repo.UpdateAsync(payment, ct);
 
-        // Return formUrl to frontend
-        var result = new PaymentInitiateResponse
+        return Result<PaymentInitiateResponse>.Ok(new PaymentInitiateResponse
         {
             PaymentId = payment.Id,
-            GatewayOrderId = registerOrderDto.GatewayOrderId,
-            FormUrl = registerOrderDto.FormUrl,
+            GatewayOrderId = payment.GatewayOrderId,
+            FormUrl = register.FormUrl,
             Status = payment.Status.ToString()
-        };
-
-        return Result<PaymentInitiateResponse>.Ok(result);
-    }
+        });
+    }        
 
     /// Step B: Callback/Return verification - JCC redirects to returnUrl with orderId   
     public async Task<Result<PaymentConfirmResponse>> ConfirmPaymentAsync(
         string gatewayOrderId,
         CancellationToken ct = default)
     {
+        // Load payment
         var payment = await _repo.FindByGatewayOrderIdAsync(gatewayOrderId, ct);
         if (payment is null)
         {
             return _errors.Fail<PaymentConfirmResponse>(ErrorCodes.PAY.PaymentNotFound);
         }
 
-        // Call getOrderStatusExtended.do to verify final status       
+        // Idempotency guard — do NOT reprocess final states
+        if (payment.Status == PaymentStatus.Approved ||
+            payment.Status == PaymentStatus.Declined)
+        {
+            return Result<PaymentConfirmResponse>.Ok(BuildConfirmResponse(payment));
+        }
+
+        // Call JCC getOrderStatusExtended.do to verify final status
         var orderStatusDto = await _jcc.GetOrderStatusAsync(gatewayOrderId, ct);
 
         if (!orderStatusDto.Success || orderStatusDto.OrderStatus is null)
@@ -108,33 +147,67 @@ public class PaymentService : IPaymentService
             payment.Status = PaymentStatus.Error;
             payment.JccErrorCode = orderStatusDto.ErrorCode;
             payment.JccErrorMessage = orderStatusDto.ErrorMessage;
-        }
-        else
-        {
-            // Persist raw JCC info
-            payment.JccOrderStatus = (JccOrderStatus)orderStatusDto.OrderStatus.Value;
-            payment.JccActionCode = orderStatusDto.ActionCode?.ToString();
 
-            // Map to business status
-            payment.Status = payment.JccOrderStatus == JccOrderStatus.AuthorizedAndCaptured
-                ? PaymentStatus.Approved
-                : PaymentStatus.Declined;
+            payment.ModifiedAt = DateTime.UtcNow;
+            await _repo.UpdateAsync(payment, ct);
+
+            return Result<PaymentConfirmResponse>.Ok(BuildConfirmResponse(payment));
         }
+
+        // Persist raw gateway data
+        payment.JccOrderStatus = (JccOrderStatus)orderStatusDto.OrderStatus.Value;
+        payment.JccActionCode = orderStatusDto.ActionCode?.ToString();
+        payment.JccErrorCode = orderStatusDto.ErrorCode;
+        payment.JccErrorMessage = orderStatusDto.ErrorMessage;
+
+        // Map JCC status → business status
+        MapJccToBusinessStatus(payment);
 
         payment.ModifiedAt = DateTime.UtcNow;
         await _repo.UpdateAsync(payment, ct);
+        
+        return Result<PaymentConfirmResponse>.Ok(BuildConfirmResponse(payment));
+    }
 
-        var result = new PaymentConfirmResponse
+    private static void MapJccToBusinessStatus(Payment payment)
+    {
+        switch (payment.JccOrderStatus)
+        {
+            case JccOrderStatus.AuthorizedAndCaptured:
+                payment.Status = PaymentStatus.Approved;
+                break;
+
+            case JccOrderStatus.AuthorizationDeclined:
+            case JccOrderStatus.AuthorizationCanceled:
+            case JccOrderStatus.Refunded:
+                payment.Status = PaymentStatus.Declined;
+                break;
+
+            case JccOrderStatus.RegisteredNotPaid:
+            case JccOrderStatus.IssuerAuthorizationInProgress:
+            case JccOrderStatus.Pending:
+            case JccOrderStatus.PartialCompletion:
+            case JccOrderStatus.AuthorizedNotCaptured:
+                payment.Status = PaymentStatus.Pending;
+                break;
+
+            default:
+                payment.Status = PaymentStatus.Error;
+                break;
+        }
+    }
+
+    private static PaymentConfirmResponse BuildConfirmResponse(Payment payment)
+    {
+        return new PaymentConfirmResponse
         {
             PaymentId = payment.Id,
             OrderNumber = payment.OrderNumber,
-            GatewayOrderId = gatewayOrderId,
+            GatewayOrderId = payment.GatewayOrderId ?? string.Empty,
             Status = payment.Status.ToString(),
-            ActionCode = orderStatusDto.ActionCode?.ToString(),
+            ActionCode = payment.JccActionCode,
             ErrorCode = payment.JccErrorCode,
             ErrorMessage = payment.JccErrorMessage
         };
-
-        return Result<PaymentConfirmResponse>.Ok(result);
     }
 }
