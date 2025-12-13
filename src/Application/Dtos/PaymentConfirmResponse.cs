@@ -6,7 +6,7 @@ public class PaymentConfirmResponse
     public string OrderNumber { get; set; } = string.Empty;
     public string GatewayOrderId { get; set; } = string.Empty;
     public string Status { get; set; } = string.Empty;      // Approved / Declined / Error
-    public string? ActionCode { get; set; }                 // optional from JCC status response
+    public string? ActionCode { get; set; }
     public string? ErrorCode { get; set; }
     public string? ErrorMessage { get; set; }
 }

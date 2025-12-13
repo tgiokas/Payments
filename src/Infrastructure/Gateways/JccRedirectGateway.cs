@@ -75,20 +75,20 @@ public class JccRedirectGateway : ApiClientBase, IJccRedirectGateway
 
         _logger.LogInformation("Calling JCC register.do for {OrderNumber}", req.OrderNumber);
 
-        var resp = await SendRequestAsync(request, ct);
-        var json = await resp.Content.ReadAsStringAsync(ct);
+        var response = await SendRequestAsync(request, ct);
+        var jsonResponse = await response.Content.ReadAsStringAsync(ct);
 
-        if (!resp.IsSuccessStatusCode)
+        if (!response.IsSuccessStatusCode)
             return new RegisterOrderResultDto
             {
                 Success = false,
                 GatewayOrderId = null,
                 FormUrl = null,
-                ErrorCode = resp.StatusCode.ToString(),
-                ErrorMessage = json
+                ErrorCode = response.StatusCode.ToString(),
+                ErrorMessage = jsonResponse
             };       
 
-        var registerOrderDto = JsonSerializer.Deserialize<JccRegisterOrderResponse>(json);
+        var registerOrderDto = JsonSerializer.Deserialize<JccRegisterOrderResponse>(jsonResponse);
 
         string? gatewayOrderId = registerOrderDto?.OrderId;
         string? formUrl = registerOrderDto?.FormUrl;
@@ -116,7 +116,7 @@ public class JccRedirectGateway : ApiClientBase, IJccRedirectGateway
             GatewayOrderId = null,
             FormUrl = null,
             ErrorCode = registerOrderDto?.ErrorCode ?? "UNKNOWN",
-            ErrorMessage = registerOrderDto?.ErrorMessage ?? json
+            ErrorMessage = registerOrderDto?.ErrorMessage ?? jsonResponse
         };
     }
 
@@ -146,20 +146,20 @@ public class JccRedirectGateway : ApiClientBase, IJccRedirectGateway
 
         _logger.LogInformation("Calling JCC getOrderStatusExtended.do for {GatewayOrderId}", gatewayOrderId);
 
-        var resp = await SendRequestAsync(request, ct);
-        var json = await resp.Content.ReadAsStringAsync(ct);
+        var response = await SendRequestAsync(request, ct);
+        var jsonResponse = await response.Content.ReadAsStringAsync(ct);
 
-        if (!resp.IsSuccessStatusCode)
+        if (!response.IsSuccessStatusCode)
             return new OrderStatusResultDto
             {
                 Success = false,
                 OrderStatus = null,
                 ActionCode = null,
-                ErrorCode = "HTTP_" + resp.StatusCode,
-                ErrorMessage = json
+                ErrorCode = "HTTP_" + response.StatusCode,
+                ErrorMessage = jsonResponse
             };
 
-        var orderStatusDto = JsonSerializer.Deserialize<JccOrderStatusResponse>(json);
+        var orderStatusDto = JsonSerializer.Deserialize<JccOrderStatusResponse>(jsonResponse);
 
         return new OrderStatusResultDto
         {
