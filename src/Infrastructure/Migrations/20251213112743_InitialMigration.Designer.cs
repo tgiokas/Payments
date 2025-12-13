@@ -12,7 +12,7 @@ using Payments.Infrastructure.Database;
 namespace Payments.Infrastructure.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20251130195210_InitialMigration")]
+    [Migration("20251213112743_InitialMigration")]
     partial class InitialMigration
     {
         /// <inheritdoc />
@@ -31,6 +31,10 @@ namespace Payments.Infrastructure.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid")
                         .HasColumnName("id");
+
+                    b.Property<string>("ActionCode")
+                        .HasColumnType("text")
+                        .HasColumnName("action_code");
 
                     b.Property<string>("AmountCurrency")
                         .IsRequired()
@@ -66,18 +70,22 @@ namespace Payments.Infrastructure.Migrations
                         .HasColumnType("integer")
                         .HasColumnName("method");
 
+                    b.Property<DateTime?>("ModifiedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("modified_at");
+
                     b.Property<string>("OrderNumber")
                         .IsRequired()
                         .HasColumnType("text")
                         .HasColumnName("order_number");
 
+                    b.Property<int>("OrderStatus")
+                        .HasColumnType("integer")
+                        .HasColumnName("order_status");
+
                     b.Property<int>("Status")
                         .HasColumnType("integer")
                         .HasColumnName("status");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("updated_at");
 
                     b.HasKey("Id")
                         .HasName("pk_payments");

@@ -43,7 +43,8 @@ public class PaymentService : IPaymentService
             AmountCurrency = request.Currency,
             Method = method,
             IdempotencyKey = idempotencyKey,
-            Status = PaymentStatus.Pending
+            Status = PaymentStatus.Pending,
+            OrderStatus = JccOrderStatus.RegisteredNotPaid
         };
 
         await _repo.AddAsync(payment, ct);
@@ -108,13 +109,16 @@ public class PaymentService : IPaymentService
             payment.ErrorCode = orderStatusDto.ErrorCode;
             payment.ErrorMessage = orderStatusDto.ErrorMessage;
         }
-        else if (orderStatusDto.OrderStatus == 2)
-        {
-            payment.Status = PaymentStatus.Approved;
-        }
         else
         {
-            payment.Status = PaymentStatus.Declined;
+            // Persist raw JCC info
+            payment.OrderStatus = (JccOrderStatus)orderStatusDto.OrderStatus.Value;
+            payment.ActionCode = orderStatusDto.ActionCode?.ToString();
+
+            // Map to business status
+            payment.Status = payment.OrderStatus == JccOrderStatus.AuthorizedAndCaptured
+                ? PaymentStatus.Approved
+                : PaymentStatus.Declined;
         }
 
         payment.ModifiedAt = DateTime.UtcNow;

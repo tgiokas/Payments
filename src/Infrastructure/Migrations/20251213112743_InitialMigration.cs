@@ -23,10 +23,12 @@ namespace Payments.Infrastructure.Migrations
                     method = table.Column<int>(type: "integer", nullable: false),
                     status = table.Column<int>(type: "integer", nullable: false),
                     idempotency_key = table.Column<string>(type: "text", nullable: false),
+                    action_code = table.Column<string>(type: "text", nullable: true),
+                    order_status = table.Column<int>(type: "integer", nullable: false),
                     error_code = table.Column<string>(type: "text", nullable: true),
                     error_message = table.Column<string>(type: "text", nullable: true),
                     created_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
-                    updated_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: true)
+                    modified_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: true)
                 },
                 constraints: table =>
                 {

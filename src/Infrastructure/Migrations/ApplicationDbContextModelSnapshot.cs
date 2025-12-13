@@ -29,6 +29,10 @@ namespace Payments.Infrastructure.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("id");
 
+                    b.Property<string>("ActionCode")
+                        .HasColumnType("text")
+                        .HasColumnName("action_code");
+
                     b.Property<string>("AmountCurrency")
                         .IsRequired()
                         .HasColumnType("text")
@@ -63,18 +67,22 @@ namespace Payments.Infrastructure.Migrations
                         .HasColumnType("integer")
                         .HasColumnName("method");
 
+                    b.Property<DateTime?>("ModifiedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("modified_at");
+
                     b.Property<string>("OrderNumber")
                         .IsRequired()
                         .HasColumnType("text")
                         .HasColumnName("order_number");
 
+                    b.Property<int>("OrderStatus")
+                        .HasColumnType("integer")
+                        .HasColumnName("order_status");
+
                     b.Property<int>("Status")
                         .HasColumnType("integer")
                         .HasColumnName("status");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("updated_at");
 
                     b.HasKey("Id")
                         .HasName("pk_payments");
