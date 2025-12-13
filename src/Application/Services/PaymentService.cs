@@ -44,7 +44,7 @@ public class PaymentService : IPaymentService
             Method = method,
             IdempotencyKey = idempotencyKey,
             Status = PaymentStatus.Pending,
-            OrderStatus = JccOrderStatus.RegisteredNotPaid
+            JccOrderStatus = JccOrderStatus.RegisteredNotPaid
         };
 
         await _repo.AddAsync(payment, ct);
@@ -63,8 +63,8 @@ public class PaymentService : IPaymentService
         if (!registerOrderDto.Success || registerOrderDto.GatewayOrderId is null || registerOrderDto.FormUrl is null)
         {
             payment.Status = PaymentStatus.Error;
-            payment.ErrorCode = registerOrderDto.ErrorCode;
-            payment.ErrorMessage = registerOrderDto.ErrorMessage;
+            payment.JccErrorCode = registerOrderDto.ErrorCode;
+            payment.JccErrorMessage = registerOrderDto.ErrorMessage;
             payment.ModifiedAt = DateTime.UtcNow;
             await _repo.UpdateAsync(payment, ct);
 
@@ -106,17 +106,17 @@ public class PaymentService : IPaymentService
         if (!orderStatusDto.Success || orderStatusDto.OrderStatus is null)
         {
             payment.Status = PaymentStatus.Error;
-            payment.ErrorCode = orderStatusDto.ErrorCode;
-            payment.ErrorMessage = orderStatusDto.ErrorMessage;
+            payment.JccErrorCode = orderStatusDto.ErrorCode;
+            payment.JccErrorMessage = orderStatusDto.ErrorMessage;
         }
         else
         {
             // Persist raw JCC info
-            payment.OrderStatus = (JccOrderStatus)orderStatusDto.OrderStatus.Value;
-            payment.ActionCode = orderStatusDto.ActionCode?.ToString();
+            payment.JccOrderStatus = (JccOrderStatus)orderStatusDto.OrderStatus.Value;
+            payment.JccActionCode = orderStatusDto.ActionCode?.ToString();
 
             // Map to business status
-            payment.Status = payment.OrderStatus == JccOrderStatus.AuthorizedAndCaptured
+            payment.Status = payment.JccOrderStatus == JccOrderStatus.AuthorizedAndCaptured
                 ? PaymentStatus.Approved
                 : PaymentStatus.Declined;
         }
@@ -131,8 +131,8 @@ public class PaymentService : IPaymentService
             GatewayOrderId = gatewayOrderId,
             Status = payment.Status.ToString(),
             ActionCode = orderStatusDto.ActionCode?.ToString(),
-            ErrorCode = payment.ErrorCode,
-            ErrorMessage = payment.ErrorMessage
+            ErrorCode = payment.JccErrorCode,
+            ErrorMessage = payment.JccErrorMessage
         };
 
         return Result<PaymentConfirmResponse>.Ok(result);

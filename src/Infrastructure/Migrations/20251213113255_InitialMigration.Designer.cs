@@ -12,7 +12,7 @@ using Payments.Infrastructure.Database;
 namespace Payments.Infrastructure.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20251213112743_InitialMigration")]
+    [Migration("20251213113255_InitialMigration")]
     partial class InitialMigration
     {
         /// <inheritdoc />
@@ -32,10 +32,6 @@ namespace Payments.Infrastructure.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("id");
 
-                    b.Property<string>("ActionCode")
-                        .HasColumnType("text")
-                        .HasColumnName("action_code");
-
                     b.Property<string>("AmountCurrency")
                         .IsRequired()
                         .HasColumnType("text")
@@ -49,14 +45,6 @@ namespace Payments.Infrastructure.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
 
-                    b.Property<string>("ErrorCode")
-                        .HasColumnType("text")
-                        .HasColumnName("error_code");
-
-                    b.Property<string>("ErrorMessage")
-                        .HasColumnType("text")
-                        .HasColumnName("error_message");
-
                     b.Property<string>("GatewayOrderId")
                         .HasColumnType("text")
                         .HasColumnName("gateway_order_id");
@@ -65,6 +53,22 @@ namespace Payments.Infrastructure.Migrations
                         .IsRequired()
                         .HasColumnType("text")
                         .HasColumnName("idempotency_key");
+
+                    b.Property<string>("JccActionCode")
+                        .HasColumnType("text")
+                        .HasColumnName("jcc_action_code");
+
+                    b.Property<string>("JccErrorCode")
+                        .HasColumnType("text")
+                        .HasColumnName("jcc_error_code");
+
+                    b.Property<string>("JccErrorMessage")
+                        .HasColumnType("text")
+                        .HasColumnName("jcc_error_message");
+
+                    b.Property<int>("JccOrderStatus")
+                        .HasColumnType("integer")
+                        .HasColumnName("jcc_order_status");
 
                     b.Property<int>("Method")
                         .HasColumnType("integer")
@@ -78,10 +82,6 @@ namespace Payments.Infrastructure.Migrations
                         .IsRequired()
                         .HasColumnType("text")
                         .HasColumnName("order_number");
-
-                    b.Property<int>("OrderStatus")
-                        .HasColumnType("integer")
-                        .HasColumnName("order_status");
 
                     b.Property<int>("Status")
                         .HasColumnType("integer")
