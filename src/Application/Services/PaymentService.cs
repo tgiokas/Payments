@@ -104,7 +104,7 @@ public class PaymentService : IPaymentService
             return _errors.Fail<PaymentInitiateResponse>(ErrorCodes.PAY.DoPaymentFailed);
         }
 
-        // Store GatewayOrderId + Status Redirected    
+        // Store GatewayOrderId + Status Redirected
         payment.GatewayOrderId = register.GatewayOrderId;
         payment.Status = PaymentStatus.Redirected;
         payment.ModifiedAt = DateTime.UtcNow;
