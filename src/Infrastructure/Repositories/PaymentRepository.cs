@@ -15,17 +15,25 @@ public class PaymentRepository : IPaymentRepository
         _dbContext = dbContext;
     }
 
-    public Task<Payment?> FindByIdAsync(Guid id, CancellationToken ct = default)
-        => _dbContext.Payments.FirstOrDefaultAsync(x => x.Id == id, ct);
+    public Task<Payment?> GetByIdAsync(Guid id, CancellationToken ct = default)
+    {
+        return _dbContext.Payments.FirstOrDefaultAsync(x => x.Id == id, ct);
+    }
 
-    public Task<Payment?> FindByOrderNumberAsync(string orderNumber, CancellationToken ct = default)
-        => _dbContext.Payments.FirstOrDefaultAsync(x => x.OrderNumber == orderNumber, ct);
+    public Task<Payment?> GetByOrderNumberAsync(string orderNumber, CancellationToken ct = default)
+    {
+        return _dbContext.Payments.FirstOrDefaultAsync(x => x.OrderNumber == orderNumber, ct);
+    }
 
-    public Task<Payment?> FindByGatewayOrderIdAsync(string gatewayOrderId, CancellationToken ct = default)
-    => _dbContext.Payments.FirstOrDefaultAsync(x => x.GatewayOrderId == gatewayOrderId, ct);
+    public Task<Payment?> GetByGatewayOrderIdAsync(string gatewayOrderId, CancellationToken ct = default)
+    {
+        return _dbContext.Payments.FirstOrDefaultAsync(x => x.GatewayOrderId == gatewayOrderId, ct);
+    }
 
-    public Task<Payment?> FindByIdempotencyAsync(string idempotencyKey, CancellationToken ct = default)
-        => _dbContext.Payments.FirstOrDefaultAsync(x => x.IdempotencyKey == idempotencyKey, ct);
+    public Task<Payment?> GetByIdempotencyAsync(string idempotencyKey, CancellationToken ct = default)
+    {
+        return _dbContext.Payments.FirstOrDefaultAsync(x => x.IdempotencyKey == idempotencyKey, ct);
+    }
 
     public async Task AddAsync(Payment rule, CancellationToken ct = default)
     {

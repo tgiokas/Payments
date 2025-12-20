@@ -9,9 +9,12 @@ namespace Payments.Api.Controllers;
 [Route("payments")]
 public class PaymentsController : ControllerBase
 {
-    private readonly IPaymentService _app;
+    private readonly IPaymentService _paymentService;
 
-    public PaymentsController(IPaymentService app) => _app = app;
+    public PaymentsController(IPaymentService paymentService)
+    {
+        _paymentService = paymentService;
+    }
 
     /// Initiate payment => register.do => return formUrl
     [HttpPost("initiate")]
@@ -22,7 +25,7 @@ public class PaymentsController : ControllerBase
         if (string.IsNullOrWhiteSpace(idempotencyKey))
             return BadRequest("X-Idempotency-Key is required.");
 
-        var result = await _app.InitiatePaymentAsync(request, idempotencyKey, ct);
+        var result = await _paymentService.InitiatePaymentAsync(request, idempotencyKey, ct);
         return Ok(result);
     }
 
@@ -35,15 +38,15 @@ public class PaymentsController : ControllerBase
         if (string.IsNullOrWhiteSpace(gatewayOrderId))
             return BadRequest("mdOrder or orderId is required.");
 
-        var result = await _app.ConfirmPaymentAsync(gatewayOrderId, ct);        
+        var result = await _paymentService.ConfirmPaymentAsync(gatewayOrderId, ct);        
 
         var page = "jcc-payments.html";
         // Build redirect URL back to frontend
         var redirectUrl =
             $"http://localhost:5005/" + page +
             $"?status={Uri.EscapeDataString(result.Data?.Status ?? "Error")}" +
-            $"&order={Uri.EscapeDataString(result.Data.OrderNumber)}" +
-            $"&paymentId={Uri.EscapeDataString(result.Data.PaymentId.ToString())}";
+            $"&order={Uri.EscapeDataString(result.Data?.OrderNumber!)}" +
+            $"&paymentId={Uri.EscapeDataString(result.Data?.PaymentId.ToString()!)}";
 
         return Redirect(redirectUrl);
 
@@ -55,4 +58,28 @@ public class PaymentsController : ControllerBase
         //    result
         //});
     }
+
+    [HttpGet("{id:guid}")]
+    public async Task<IActionResult> GetPayment(Guid id)
+    {
+        return Ok(await _paymentService.GetByIdAsync(id));
+    }
+
+    [HttpGet("order/{orderNumber}")]
+    public async Task<IActionResult> GetPaymentByOrder(string orderNumber)
+    {
+        return Ok(await _paymentService.GetByOrderNumberAsync(orderNumber));
+    }
+
+    //[HttpGet]
+    //public async Task<IActionResult> GetPayments([FromQuery] string? status)
+    //{
+    //    PaymentStatus? st = null;
+
+    //    if (!string.IsNullOrWhiteSpace(status))
+    //        st = Enum.Parse<PaymentStatus>(status, ignoreCase: true);
+
+    //    return Ok(await _app.GetListAsync(st));
+    //}
+
 }
