@@ -32,10 +32,10 @@ public class JccRedirectGateway : ApiClientBase, IJccRedirectGateway
         _config = config;
         _signer = signer;
 
-        _baseUrl = _config["Jcc:RestBaseUrl"] ?? throw new ArgumentNullException("Jcc:RestBaseUrl is missing.");
-        _currencyNumeric = _config["Jcc:CurrencyNumeric"] ?? "978";        
-        _defaultReturnUrl = _config["Jcc:ReturnUrl"] ?? throw new ArgumentNullException("Jcc:ReturnUrl is missing.");
-        _defaultLanguage = _config["Jcc:Language"] ?? "en";
+        _baseUrl = _config["JCC_REST_BASE_URL"] ?? throw new ArgumentNullException("JCC_REST_BASE_URL is missing.");
+        _currencyNumeric = _config["JCC_CURRENCY_NUMERIC"] ?? "978";
+        _defaultReturnUrl = _config["JCC_RETURN_URL"] ?? throw new ArgumentNullException("JCC_RETURN_URL is missing.");
+        _defaultLanguage = _config["JCC_LANGUAGE"] ?? "en";
     }
 
     public async Task<RegisterOrderResultDto> RegisterOrderAsync(JccRegisterOrderRequest req, CancellationToken ct = default)
@@ -173,15 +173,15 @@ public class JccRedirectGateway : ApiClientBase, IJccRedirectGateway
 
     private void ApplyAuth(Dictionary<string, string> form)
     {
-        var token = _config["Jcc:Token"];
+        var token = _config["JCC_TOKEN"];
         if (!string.IsNullOrWhiteSpace(token))
         {
             form["token"] = token;
             return;
         }
 
-        form["userName"] = _config["Jcc:UserName"]!;
-        form["password"] = _config["Jcc:Password"]!;
+        form["userName"] = _config["JCC_USERNAME"]!;
+        form["password"] = _config["JCC_PASSWORD"]!;
     }
 
     private static string? ExtractQueryParam(string url, string key)

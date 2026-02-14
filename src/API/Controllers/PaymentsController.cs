@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Confluent.Kafka;
+using Microsoft.AspNetCore.Mvc;
 
 using Payments.Application.Dtos;
 using Payments.Application.Interfaces;
@@ -10,10 +11,16 @@ namespace Payments.Api.Controllers;
 public class PaymentsController : ControllerBase
 {
     private readonly IPaymentService _paymentService;
+    private readonly IConfiguration _config;
+    private readonly string _frontEndUrl;
 
-    public PaymentsController(IPaymentService paymentService)
+
+    public PaymentsController(IPaymentService paymentService, IConfiguration config)
     {
         _paymentService = paymentService;
+        _config = config;
+
+        _frontEndUrl = _config["JCC_FRONTEND_RETURN_URL"] ?? throw new ArgumentNullException("JCC_FRONTEND_RETURN_URL is missing.");
     }
 
     /// Initiate payment => register.do => return formUrl
@@ -38,12 +45,11 @@ public class PaymentsController : ControllerBase
         if (string.IsNullOrWhiteSpace(gatewayOrderId))
             return BadRequest("mdOrder or orderId is required.");
 
-        var result = await _paymentService.ConfirmPaymentAsync(gatewayOrderId, ct);        
+        var result = await _paymentService.ConfirmPaymentAsync(gatewayOrderId, ct);
 
-        var page = "jcc-payments.html";
         // Build redirect URL back to frontend
         var redirectUrl =
-            $"http://localhost:5005/" + page +
+            $"{_frontEndUrl}" +
             $"?status={Uri.EscapeDataString(result.Data?.Status ?? "Error")}" +
             $"&order={Uri.EscapeDataString(result.Data?.OrderNumber!)}" +
             $"&paymentId={Uri.EscapeDataString(result.Data?.PaymentId.ToString()!)}";
@@ -70,16 +76,5 @@ public class PaymentsController : ControllerBase
     {
         return Ok(await _paymentService.GetByOrderNumberAsync(orderNumber));
     }
-
-    //[HttpGet]
-    //public async Task<IActionResult> GetPayments([FromQuery] string? status)
-    //{
-    //    PaymentStatus? st = null;
-
-    //    if (!string.IsNullOrWhiteSpace(status))
-    //        st = Enum.Parse<PaymentStatus>(status, ignoreCase: true);
-
-    //    return Ok(await _app.GetListAsync(st));
-    //}
 
 }

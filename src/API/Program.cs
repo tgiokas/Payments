@@ -43,13 +43,6 @@ builder.Services.AddSingleton<IEmailSender, KafkaEmailSender>();
 
 builder.Services.AddSingleton<IMessagePublisher, KafkaPublisher>();
 
-//builder.Services.AddDistributedPostgreSqlCache(options =>
-//{
-//    options.ConnectionString = builder.Configuration.GetConnectionString("DefaultConnection");
-//    options.SchemaName = "public";
-//    options.TableName = "CacheEntries";
-//});
-
 // Error Catalog Path
 var path = Path.Combine(builder.Environment.ContentRootPath, "errors.json");
 if (!File.Exists(path))
@@ -71,29 +64,23 @@ builder.Services.AddCors(options =>
     });
 });
 
-if (builder.Environment.IsDevelopment())
-{
-    builder.Services.AddEndpointsApiExplorer();
-    builder.Services.AddSwaggerGen();
-}
+//if (builder.Environment.IsDevelopment())
+//{
+//    builder.Services.AddEndpointsApiExplorer();
+//    builder.Services.AddSwaggerGen();
+//}
 
 var app = builder.Build();
 
-// Serve static files from wwwroot
-app.UseStaticFiles();
+//// Serve static files from wwwroot
+//app.UseStaticFiles();
 
-app.UseRouting();
+//app.UseRouting();
 
 // Expose a simple health endpoint at /health
 app.MapHealthChecks("/health");
 
 Log.Information("Application is starting...");
-
-if (app.Environment.IsDevelopment())
-{
-    app.UseSwagger();
-    app.UseSwaggerUI();
-}
 
 using var scope = app.Services.CreateScope();
 var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();

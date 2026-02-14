@@ -1,0 +1,50 @@
+services:
+  jcc-db:
+    image: postgres:15.2
+    container_name: jcc-db
+    env_file:
+      - .env
+    environment:
+      POSTGRES_USER: ${JCC_DB_POSTGRES_USER}
+      POSTGRES_PASSWORD: ${JCC_DB_POSTGRES_PASSWORD}
+      POSTGRES_DB: ${JCC_DB_POSTGRES_DB}
+    #dev only
+    ports:
+      - "5436:5432"
+    volumes:
+      - jcc-db-data:/var/lib/postgresql/data
+    networks:
+      - archium-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${JCC_DB_POSTGRES_USER:-postgres} -d ${JCC_DB_POSTGRES_DB:-postgres}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  payments.api:
+    container_name: payments-api
+    build:
+      context: .
+      dockerfile: src/API/Dockerfile
+    env_file:
+      - .env
+    depends_on:     
+      jcc-db:
+        condition: service_healthy
+    #dev only
+    ports:
+      - "5005:80"
+    networks:
+      - archium-network
+    volumes:
+      - ../error-codes/errors.json:/app/errors.json:ro
+volumes:
+  jcc-db-data: 
+
+networks:
+  archium-network:
+    driver: bridge
+    name: archium-network
+
+

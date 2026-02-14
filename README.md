@@ -1,177 +1,109 @@
-﻿# Authentication microservice with Keycloak
+﻿# Payments API
 
-## Overview
+**.NET 8 Web API** for handling payment operations using the **JCC Payment Gateway**.
 
-**Authentication** is a standalone microservice for authentication and authorization, built using .NET 9 and integrated with **Keycloak**. 
-While it is part of the broader **Document Management System (DMS)**, it is designed to work **independently** and can be used in **any modern system** 
-that requires secure identity management. 
-It integrates with Keycloak for identity access and user management, and supports both user and machine-to-machine authentication.
-
----
-
-## Features
-
-🔒 User Authentication / Authorization ✅
-
-🔑 Role-Based Access Control (RBAC) ✅
-
-🔐 Multi-Factor Authentication (MFA) ✅
-
-📧 Email-based Link Verification ✅
-
-📱 Sms based Verification
-
-🌐 GSIS (www1.gsis.gr) Integration
-
-👥 User Provisioning (Auto-Creating Users in Keycloak) ✅
-
-🛡️ GDPR compliance through data anonymization.
-
-🔗 Social Logins: (e.g. Google, Facebook, Apple ID)
-
-📊 Admin Dashboard (optional UI)
+- Initiates payment sessions with JCC
+- Handles JCC callbacks after payment completion
+- Persists and exposes payment status
+- Integrates with the **JCC Web SDK (Multi-frame)** on the frontend
 
 ---
 
-## 🗃️ Database: PostgreSQL
+## Controller Methods
 
-This service uses **PostgreSQL** to persist data, such as: UserProfiles & TotpSecrets
+Summary of the main controller methods exposed by the API.
 
----
+### PaymentsController
 
-## 📜 Logging - Serilog
+- **POST** `/payments/initiate`  
+  Initiates a new payment session with JCC.  
+  Registers the order with the JCC gateway (`register.do`) and returns the
+  `gatewayOrderId (mdOrder)` required by the frontend Web SDK.
 
-This microservice uses **Serilog** for structured logging.
-Serilog is configured to log to various sinks, including console, file, Seq, Elastic. 
-The configuration can be found in the `appsettings.json` file.
+- **GET** `/payments/callback`  
+  Callback endpoint used by JCC after payment completion.  
+  Verifies the final payment status by calling `getOrderStatusExtended.do`
+  and updates the internal payment record.
 
----
+- **GET** `/payments/{id}`  
+  Retrieves a payment by internal payment ID.
 
-## 🚀 Tech Stack
-
-- .NET 9
-- Keycloak
-- PostgreSQL
-- Otp.NET
-- IMemoryCache
-- Serilog for logging
-- Clean Architecture (SOLID)
+- **GET** `/payments/order/{orderNumber}`  
+  Retrieves a payment by business order number.
 
 ---
 
-## Keycloak Configuration
+## Payment Flow
 
-### 1. Create Realm
-![Create Realm](images/0.CreateRealm.png)
-
-### 2. Create Client
-![Create Client](images/1.CreateClient.png)
-
-### 3. Configure Client
-![Configure Client](images/2.ConfigureClient.png)
-
-### 4. Assign ServiceAccount Roles to Client
-![Assign ServiceAccount](images/3.AssignServiceAccountRoles2Client.png)
-
-### 5. Client-ClientScopes
-![Client Scopes](images/4.Client-ClientScopes.png)
-
-### 6. Configure a new Mapper
-![Mapper](images/5.ConfigureNewMapper.png)
-
-### 7. Add Mapper Audience
-![Mapper Audience](images/6.AddMapperAudience.png)
-
-### 8. Keep Client Secret
-![Client Secret](images/7.KeepClientSecret.png)
-
-### 9. Realm Settings User Profile
-![Realm Settings](images/8.RealmSettingsUserProfile.png)
-
-### 10. FirstName & LastName required Field Off
-![User Profile](images/9.FirstNameRequiredFieldOff.png)
-
-### 11. Create User
-![Create User](images/10.CreateUser.png)
-
-### 12. Set Password
-![SetUp Password](images/11.SetUpPassword.png)
+1. Frontend calls `POST /payments/initiate`
+2. Backend registers the order with JCC
+3. Backend returns `gatewayOrderId (mdOrder)`
+4. Frontend initializes the JCC Web SDK using `mdOrder`
+5. User completes payment in JCC-hosted frames
+6. JCC redirects the browser to `/payments/callback`
+7. Backend verifies payment status and updates the database
+8. Backend redirects back to the frontend result page
 
 ---
 
-## MFA-First Login Flow with TOTP
+## JCC Web SDK
 
-This microservice handles **authentication and MFA (TOTP)** using:
+This project integrates with the **JCC Web SDK (Multi-frame)** for secure card
+payment processing.
 
-- Keycloak (for token issuance and identity provider)
-- TOTP (Time-based One-Time Password) as the MFA method
-- Custom UI (not using Keycloak login screens)
-- `IMemoryCache` for secure temporary state
+> ⚠️ The backend **never handles card data**.  
+> All sensitive card fields (PAN, expiry date, CVC) are collected securely by JCC
+> via the Web SDK.
 
-### 🔐 TOTP Setup (One-time per user)
-
-1. `POST /mfa/setup`  
-   → Generates TOTP secret, QR code URI, and setup token  
-   → Stores temporary secret in `IMemoryCache`
-
-2. `POST /mfa/verify-setup`  
-   → Validates 6-digit code  
-   → If correct, stores TOTP secret to database  
-   → Removes from cache
-
-
-### 🔑 MFA Login Flow
-
-1. `POST /auth/login`  
-   → Validates username/password via Keycloak  
-   → If MFA required:
-     - Creates a `setup_token`
-     - Stores `username`, `password`, `userId` in cache  
-   → Returns `mfa_required = true` or token
-
-2. `POST /mfa/verify-login`  
-   → Validates 6-digit TOTP code  
-   → If correct, issues Keycloak token using cached login  
-   → Returns `access_token`, `refresh_token`
+- **Official SDK Documentation:**  
+  https://gateway.jcc.com.cy/developer/en/integration/sdk/web_sdk_multiframe.html
 
 ---
 
+## Example Frontend Integration (jcc-payments.html)
 
-### Resolving https access problems
+An example HTML implementation using the JCC Web SDK is provided in `jcc-payments.html`.
 
-# 1. Connect to the Keycloak database container
-```bash
-docker exec -it keycloak-db \
-  psql -U keycloakuser -d keycloakdb
-```
+The example demonstrates:
+- Calling `POST /payments/initiate`
+- Receiving the `gatewayOrderId (mdOrder)`
+- Initializing the JCC `PaymentForm`
+- Submitting the payment via the Web SDK
+- Handling the redirect result after payment completion
 
-# 2. Inside the psql shell, update the realm to disable SSL requirement
-```bash
-UPDATE realm SET ssl_required = 'NONE' WHERE name = 'master';
-```
+This file should be used as a **reference implementation** for frontend teams.
 
-# 3. Exit psql (type: \q) and restart the Keycloak container
-```bash
-docker restart keycloak
-```
+---
 
-### Exporting Realm settings
+## Configuration
 
-```bash
-docker run \
-  --rm \
-  --name keycloak_exporter \
-  --network archium-network \
-  -v /Volumes/tor-data/source/repos/archium/authentication-service/exports/:/tmp/keycloak-export:Z \
-  -e KC_DB=postgres \
-  -e KC_DB_USERNAME=keycloakuser \
-  -e KC_DB_PASSWORD=keycloakpass \
-  -e KC_DB_URL_HOST=keycloak-db \
-  -e KC_DB_URL_DATABASE=keycloakdb \
-  -e KC_DB_URL_PORT=5432 \
-  quay.io/keycloak/keycloak:26.3.4 \
-  export \
-  --realm DMSRealm \
-  --file /tmp/keycloak-export/realm-export.json \
-  --users same_file
-  ```
+Application configuration is managed via  `.env` & `appsettings.json`.
+
+Configuration includes:
+- JCC REST base URL
+- Merchant credentials or token
+- Callback / return URLs
+- Database connection string
+
+---
+
+## Testing
+
+For development and testing, use the official **JCC test cards**.
+
+- **Test Cards Documentation:**  
+  https://gateway.jcc.com.cy/developer/en/integration/structure/test-cards.html
+
+
+---
+
+## Notes
+
+- Idempotency is enforced on payment initiation using the `X-Idempotency-Key` header.
+- Each `OrderNumber` is unique and protected from duplicate payments.
+- Payment status is verified server-to-server with JCC for security.
+- The API is stateless and suitable for horizontal scaling (Kubernetes).
+
+---
+
+For further details, refer to the official **JCC documentation** and the source code.

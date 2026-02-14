@@ -1,0 +1,150 @@
+{
+	"info": {
+		"_postman_id": "9ac35b61-b97f-4831-9ceb-ebe77c953e7c",
+		"name": "Payments API - JCC Gateway",
+		"description": "Postman collection for testing the Payments API with JCC integration",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "36391550"
+	},
+	"item": [
+		{
+			"name": "Initiate Payment",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"type": "text/javascript",
+						"exec": [
+							"if (pm.response.code === 200) {",
+							"  const json = pm.response.json();",
+							"  if (json?.data?.paymentId) {",
+							"    pm.collectionVariables.set('paymentId', json.data.paymentId);",
+							"  }",
+							"  if (json?.data?.gatewayOrderId) {",
+							"    pm.collectionVariables.set('gatewayOrderId', json.data.gatewayOrderId);",
+							"  }",
+							"}"
+						]
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "X-Idempotency-Key",
+						"value": "{{idempotencyKey}}",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"orderNumber\": \"{{orderNumber}}\",\n  \"amount\": 20.00,\n  \"currency\": \"EUR\",\n  \"method\": \"card\"\n}"
+				},
+				"url": {
+					"raw": "{{baseUrl}}/payments/initiate",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"payments",
+						"initiate"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "JCC Callback (Manual Test)",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{baseUrl}}/payments/callback?mdOrder={{gatewayOrderId}}",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"payments",
+						"callback"
+					],
+					"query": [
+						{
+							"key": "mdOrder",
+							"value": "{{gatewayOrderId}}"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Get Payment by ID",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{baseUrl}}/payments/{{paymentId}}",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"payments",
+						"{{paymentId}}"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Get Payment by Order Number",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{baseUrl}}/payments/order/{{orderNumber}}",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"payments",
+						"order",
+						"{{orderNumber}}"
+					]
+				}
+			},
+			"response": []
+		}
+	],
+	"variable": [
+		{
+			"key": "baseUrl",
+			"value": "http://localhost:5005",
+			"type": "string"
+		},
+		{
+			"key": "idempotencyKey",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "orderNumber",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "paymentId",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "gatewayOrderId",
+			"value": "",
+			"type": "string"
+		}
+	]
+}

@@ -37,7 +37,7 @@ public class PaymentService : IPaymentService
                 {
                     PaymentId = existingIdempotency.Id,
                     GatewayOrderId = existingIdempotency.GatewayOrderId!,
-                    FormUrl = string.Empty, // frontend already has it
+                    FormUrl = string.Empty,
                     Status = existingIdempotency.Status.ToString()
                 });
             }
