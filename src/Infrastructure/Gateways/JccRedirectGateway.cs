@@ -167,7 +167,9 @@ public class JccRedirectGateway : ApiClientBase, IJccRedirectGateway
             OrderStatus = orderStatusDto?.OrderStatus,
             ActionCode = orderStatusDto?.ActionCode,
             ErrorCode = orderStatusDto?.ErrorCode,
-            ErrorMessage = orderStatusDto?.ErrorMessage
+            ErrorMessage = orderStatusDto?.ErrorMessage,
+
+            Receipt = orderStatusDto
         };
     }
 

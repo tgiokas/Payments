@@ -71,12 +71,12 @@ public class PaymentService : IPaymentService
         var payment = new Payment
         {
             OrderNumber = request.OrderNumber,
-            AmountValue = request.Amount,
-            AmountCurrency = request.Currency,
+            Amount = request.Amount,
+            Currency = request.Currency,
             Method = method,
             IdempotencyKey = idempotencyKey,
             Status = PaymentStatus.Pending,
-            JccOrderStatus = JccOrderStatus.RegisteredNotPaid
+            OrderStatus = JccOrderStatus.RegisteredNotPaid
         };
         await _repo.AddAsync(payment, ct);
 
@@ -84,8 +84,8 @@ public class PaymentService : IPaymentService
         var jccReq = new JccRegisterOrderRequest
         {
             OrderNumber = payment.OrderNumber,
-            Amount = payment.AmountValue,
-            Currency = payment.AmountCurrency,
+            Amount = payment.Amount,
+            Currency = payment.Currency,
             Description = $"Order {payment.OrderNumber}"
         };
         var register = await _jcc.RegisterOrderAsync(jccReq, ct);
@@ -93,8 +93,8 @@ public class PaymentService : IPaymentService
         if (!register.Success || register.GatewayOrderId is null || register.FormUrl is null)
         {
             payment.Status = PaymentStatus.Error;
-            payment.JccErrorCode = register.ErrorCode;
-            payment.JccErrorMessage = register.ErrorMessage;
+            payment.ErrorCode = register.ErrorCode;
+            payment.ErrorMessage = register.ErrorMessage;
             payment.ModifiedAt = DateTime.UtcNow;
 
             await _repo.UpdateAsync(payment, ct);
@@ -120,7 +120,7 @@ public class PaymentService : IPaymentService
 
     /// Step B: Callback/Return verification - JCC redirects to returnUrl with orderId   
     public async Task<Result<PaymentConfirmResponse>> ConfirmPaymentAsync(
-        string gatewayOrderId, 
+        string gatewayOrderId,
         CancellationToken ct = default)
     {
         // Load payment
@@ -143,8 +143,8 @@ public class PaymentService : IPaymentService
         if (!orderStatusDto.Success || orderStatusDto.OrderStatus is null)
         {
             payment.Status = PaymentStatus.Error;
-            payment.JccErrorCode = orderStatusDto.ErrorCode;
-            payment.JccErrorMessage = orderStatusDto.ErrorMessage;
+            payment.ErrorCode = orderStatusDto.ErrorCode;
+            payment.ErrorMessage = orderStatusDto.ErrorMessage;
 
             payment.ModifiedAt = DateTime.UtcNow;
             await _repo.UpdateAsync(payment, ct);
@@ -153,10 +153,10 @@ public class PaymentService : IPaymentService
         }
 
         // Persist raw gateway data
-        payment.JccOrderStatus = (JccOrderStatus)orderStatusDto.OrderStatus.Value;
-        payment.JccActionCode = orderStatusDto.ActionCode?.ToString();
-        payment.JccErrorCode = orderStatusDto.ErrorCode;
-        payment.JccErrorMessage = orderStatusDto.ErrorMessage;
+        payment.OrderStatus = (JccOrderStatus)orderStatusDto.OrderStatus.Value;
+        payment.ActionCode = orderStatusDto.ActionCode?.ToString();
+        payment.ErrorCode = orderStatusDto.ErrorCode;
+        payment.ErrorMessage = orderStatusDto.ErrorMessage;
 
         // Map JCC status → business status
         MapJccToBusinessStatus(payment);
@@ -164,7 +164,7 @@ public class PaymentService : IPaymentService
         payment.ModifiedAt = DateTime.UtcNow;
         await _repo.UpdateAsync(payment, ct);
 
-        return Result<PaymentConfirmResponse>.Ok(BuildConfirmResponse(payment));
+        return Result<PaymentConfirmResponse>.Ok(BuildConfirmResponse(payment, orderStatusDto.Receipt));
     }
 
     public async Task<Result<PaymentDto>> GetByIdAsync(Guid id, CancellationToken ct = default)
@@ -189,7 +189,7 @@ public class PaymentService : IPaymentService
         return Result<PaymentDto>.Ok(paymentDto);
     }
 
-    private static PaymentConfirmResponse BuildConfirmResponse(Payment payment)
+    private static PaymentConfirmResponse BuildConfirmResponse(Payment payment, JccOrderStatusResponse? receipt = null)
     {
         return new PaymentConfirmResponse
         {
@@ -197,9 +197,9 @@ public class PaymentService : IPaymentService
             OrderNumber = payment.OrderNumber,
             GatewayOrderId = payment.GatewayOrderId ?? string.Empty,
             Status = payment.Status.ToString(),
-            ActionCode = payment.JccActionCode,
-            ErrorCode = payment.JccErrorCode,
-            ErrorMessage = payment.JccErrorMessage
+            ActionCode = payment.ActionCode,
+            ErrorCode = payment.ErrorCode,
+            ErrorMessage = payment.ErrorMessage
         };
     }
 
@@ -210,8 +210,8 @@ public class PaymentService : IPaymentService
             Id = payment.Id,
             OrderNumber = payment.OrderNumber,
             GatewayOrderId = payment.GatewayOrderId,
-            Amount = payment.AmountValue,
-            Currency = payment.AmountCurrency,
+            Amount = payment.Amount,
+            Currency = payment.Currency,
             Method = payment.Method.ToString(),
             Status = payment.Status.ToString(),
             CreatedAt = payment.CreatedAt,
@@ -221,7 +221,7 @@ public class PaymentService : IPaymentService
 
     private static void MapJccToBusinessStatus(Payment payment)
     {
-        switch (payment.JccOrderStatus)
+        switch (payment.OrderStatus)
         {
             case JccOrderStatus.AuthorizedAndCaptured:
                 payment.Status = PaymentStatus.Approved;

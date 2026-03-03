@@ -6,5 +6,7 @@ public class OrderStatusResultDto
     public int? OrderStatus { get; set; }
     public int? ActionCode { get; set; }
     public string? ErrorCode { get; set; }
-    public string? ErrorMessage { get; set; }    
+    public string? ErrorMessage { get; set; }
+
+    public JccOrderStatusResponse? Receipt { get; set; }
 }
