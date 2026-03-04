@@ -1,11 +1,11 @@
 using Payments.Domain.Enums;
-using System.Text.Json.Serialization;
 
 namespace Payments.Domain.Entities;
 
 public class Payment
 {   
     public Guid Id { get; set; } = Guid.NewGuid();
+    public string? Description { get; set; }
     // Payment order reference (unique)
     public string OrderNumber { get; set; } = string.Empty;
     // JCC order id (returned by register.do)
@@ -28,13 +28,13 @@ public class Payment
     public string? ApprovalCode { get; set; }
     public string? PaymentSystem { get; set; }
 
-    // PaymentAmount Info
+    // Payment Amount Info
     public string? PaymentState { get; set; }
-    public long? ApprovedAmount { get; set; }  
-    public long? DepositedAmount { get; set; }   
-    public long? RefundedAmount { get; set; }    
-    public long? FeeAmount { get; set; } 
-    public long? TotalAmount { get; set; }
+    public decimal? ApprovedAmount { get; set; }  
+    public decimal? DepositedAmount { get; set; }   
+    public decimal? RefundedAmount { get; set; }    
+    public decimal? FeeAmount { get; set; } 
+    public decimal? TotalAmount { get; set; }
 
     public string? PaymentWay { get; set; }
     public string? ActionCode { get; set; }
@@ -42,6 +42,7 @@ public class Payment
     public string? ErrorCode { get; set; }
     public string? ErrorMessage { get; set; }
     public string? Email { get; set; }
+
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime? ModifiedAt { get; set; }
 }

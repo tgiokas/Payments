@@ -1,5 +1,4 @@
-﻿using Confluent.Kafka;
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 
 using Payments.Application.Dtos;
 using Payments.Application.Interfaces;
@@ -13,7 +12,6 @@ public class PaymentsController : ControllerBase
     private readonly IPaymentService _paymentService;
     private readonly IConfiguration _config;
     private readonly string _frontEndUrl;
-
 
     public PaymentsController(IPaymentService paymentService, IConfiguration config)
     {

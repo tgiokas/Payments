@@ -159,17 +159,39 @@ public class JccRedirectGateway : ApiClientBase, IJccRedirectGateway
                 ErrorMessage = jsonResponse
             };
 
-        var orderStatusDto = JsonSerializer.Deserialize<JccOrderStatusResponse>(jsonResponse);
+        var orderStatusResponse = JsonSerializer.Deserialize<JccOrderStatusResponse>(jsonResponse);
 
         return new OrderStatusResultDto
         {
             Success = true,
-            OrderStatus = orderStatusDto?.OrderStatus,
-            ActionCode = orderStatusDto?.ActionCode,
-            ErrorCode = orderStatusDto?.ErrorCode,
-            ErrorMessage = orderStatusDto?.ErrorMessage,
+            OrderStatus = orderStatusResponse?.OrderStatus,
+            ActionCode = orderStatusResponse?.ActionCode,
+            ErrorCode = orderStatusResponse?.ErrorCode,
+            ErrorMessage = orderStatusResponse?.ErrorMessage,
 
-            Receipt = orderStatusDto
+            // Bank Info
+            BankName = orderStatusResponse?.BankInfo?.BankName,
+            BankCountryCode = orderStatusResponse?.BankInfo?.BankCountryCode,
+            BankCountryName = orderStatusResponse?.BankInfo?.BankCountryName,
+
+            // Card Info
+            MaskedPan = orderStatusResponse?.CardAuthInfo?.MaskedPan,
+            Expiration = orderStatusResponse?.CardAuthInfo?.Expiration,
+            CardholderName = orderStatusResponse?.CardAuthInfo?.CardholderName,
+            ApprovalCode = orderStatusResponse?.CardAuthInfo?.ApprovalCode,
+            PaymentSystem = orderStatusResponse?.CardAuthInfo?.PaymentSystem,
+
+            // Payment Amount Info
+            PaymentState = orderStatusResponse?.PaymentAmountInfo?.PaymentState,
+            ApprovedAmount = orderStatusResponse?.PaymentAmountInfo?.ApprovedAmount,
+            DepositedAmount = orderStatusResponse?.PaymentAmountInfo?.DepositedAmount,
+            RefundedAmount = orderStatusResponse?.PaymentAmountInfo?.RefundedAmount,
+            FeeAmount = orderStatusResponse?.PaymentAmountInfo?.FeeAmount,
+            TotalAmount = orderStatusResponse?.PaymentAmountInfo?.TotalAmount,
+
+            // Other
+            PaymentWay = orderStatusResponse?.PaymentWay,
+            Email = orderStatusResponse?.PayerData?.Email
         };
     }
 

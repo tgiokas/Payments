@@ -21,9 +21,7 @@ public class PaymentService : IPaymentService
     }
 
     /// Step A: Initiate payment   
-    public async Task<Result<PaymentInitiateResponse>> InitiatePaymentAsync(
-        PaymentInitiateRequest request, 
-        string idempotencyKey, 
+    public async Task<Result<PaymentInitiateResponse>> InitiatePaymentAsync(PaymentInitiateRequest request, string idempotencyKey,
         CancellationToken ct = default)
     {
         // Idempotency replay
@@ -70,6 +68,7 @@ public class PaymentService : IPaymentService
         // Create Payment in DB (Status Pending) 
         var payment = new Payment
         {
+            Description = request.Description,
             OrderNumber = request.OrderNumber,
             Amount = request.Amount,
             Currency = request.Currency,
@@ -119,8 +118,7 @@ public class PaymentService : IPaymentService
     }
 
     /// Step B: Callback/Return verification - JCC redirects to returnUrl with orderId   
-    public async Task<Result<PaymentConfirmResponse>> ConfirmPaymentAsync(
-        string gatewayOrderId,
+    public async Task<Result<PaymentConfirmResponse>> ConfirmPaymentAsync(string gatewayOrderId,
         CancellationToken ct = default)
     {
         // Load payment
@@ -130,7 +128,7 @@ public class PaymentService : IPaymentService
             return _errors.Fail<PaymentConfirmResponse>(ErrorCodes.PAY.PaymentNotFound);
         }
 
-        // Idempotency guard — do NOT reprocess final states
+        // Idempotency guard - do NOT reprocess final states
         if (payment.Status == PaymentStatus.Approved ||
             payment.Status == PaymentStatus.Declined)
         {
@@ -158,13 +156,37 @@ public class PaymentService : IPaymentService
         payment.ErrorCode = orderStatusDto.ErrorCode;
         payment.ErrorMessage = orderStatusDto.ErrorMessage;
 
-        // Map JCC status → business status
+        // Bank Info
+        payment.BankName = orderStatusDto.BankName;
+        payment.BankCountryCode = orderStatusDto.BankCountryCode;
+        payment.BankCountryName = orderStatusDto.BankCountryName;
+
+        // Card Info
+        payment.MaskedPan = orderStatusDto.MaskedPan;
+        payment.Expiration = orderStatusDto.Expiration;
+        payment.CardholderName = orderStatusDto.CardholderName;
+        payment.ApprovalCode = orderStatusDto.ApprovalCode;
+        payment.PaymentSystem = orderStatusDto.PaymentSystem;
+
+        // Payment Amount Info
+        payment.PaymentState = orderStatusDto.PaymentState;
+        payment.ApprovedAmount = FromMinorUnits(orderStatusDto.ApprovedAmount);
+        payment.DepositedAmount = FromMinorUnits(orderStatusDto.DepositedAmount);
+        payment.RefundedAmount = FromMinorUnits(orderStatusDto.RefundedAmount);
+        payment.FeeAmount = FromMinorUnits(orderStatusDto.FeeAmount);
+        payment.TotalAmount = FromMinorUnits(orderStatusDto.TotalAmount);
+
+        // Other
+        payment.PaymentWay = orderStatusDto.PaymentWay;
+        payment.Email = orderStatusDto.Email;
+
+        // Map JCC status to business status
         MapJccToBusinessStatus(payment);
 
         payment.ModifiedAt = DateTime.UtcNow;
         await _repo.UpdateAsync(payment, ct);
 
-        return Result<PaymentConfirmResponse>.Ok(BuildConfirmResponse(payment, orderStatusDto.Receipt));
+        return Result<PaymentConfirmResponse>.Ok(BuildConfirmResponse(payment));
     }
 
     public async Task<Result<PaymentDto>> GetByIdAsync(Guid id, CancellationToken ct = default)
@@ -189,7 +211,7 @@ public class PaymentService : IPaymentService
         return Result<PaymentDto>.Ok(paymentDto);
     }
 
-    private static PaymentConfirmResponse BuildConfirmResponse(Payment payment, JccOrderStatusResponse? receipt = null)
+    private static PaymentConfirmResponse BuildConfirmResponse(Payment payment)
     {
         return new PaymentConfirmResponse
         {
@@ -208,12 +230,40 @@ public class PaymentService : IPaymentService
         return new PaymentDto
         {
             Id = payment.Id,
+            Description = payment.Description,
             OrderNumber = payment.OrderNumber,
             GatewayOrderId = payment.GatewayOrderId,
             Amount = payment.Amount,
             Currency = payment.Currency,
             Method = payment.Method.ToString(),
             Status = payment.Status.ToString(),
+
+            // Bank Info
+            BankName = payment.BankName,
+            BankCountryCode = payment.BankCountryCode,
+            BankCountryName = payment.BankCountryName,
+
+            // Card Info
+            MaskedPan = payment.MaskedPan,
+            Expiration = payment.Expiration,
+            CardholderName = payment.CardholderName,
+            ApprovalCode = payment.ApprovalCode,
+            PaymentSystem = payment.PaymentSystem,
+
+            // Payment Amount Info
+            PaymentState = payment.PaymentState,
+            ApprovedAmount = payment.ApprovedAmount,
+            DepositedAmount = payment.DepositedAmount,
+            RefundedAmount = payment.RefundedAmount,
+            FeeAmount = payment.FeeAmount,
+            TotalAmount = payment.TotalAmount,
+
+            PaymentWay = payment.PaymentWay,
+            ActionCode = payment.ActionCode,
+            ErrorCode = payment.ErrorCode,
+            ErrorMessage = payment.ErrorMessage,
+            Email = payment.Email,
+
             CreatedAt = payment.CreatedAt,
             ModifiedAt = payment.ModifiedAt
         };
@@ -246,4 +296,7 @@ public class PaymentService : IPaymentService
                 break;
         }
     }
+
+    private static decimal? FromMinorUnits(long? minorAmount)
+    => minorAmount.HasValue ? minorAmount.Value / 100m : null;
 }

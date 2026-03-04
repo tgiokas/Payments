@@ -73,9 +73,9 @@ builder.Services.AddCors(options =>
 var app = builder.Build();
 
 // Serve static files from wwwroot
-app.UseStaticFiles();
+//app.UseStaticFiles();
 
-app.UseRouting();
+//app.UseRouting();
 
 // Expose a simple health endpoint at /health
 app.MapHealthChecks("/health");
