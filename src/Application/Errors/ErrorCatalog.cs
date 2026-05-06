@@ -18,7 +18,7 @@ public class ErrorCatalog : IErrorCatalog
         using var doc = System.Text.Json.JsonDocument.Parse(json);
         var root = doc.RootElement;
         var map = new Dictionary<string, ErrorEntry>(StringComparer.OrdinalIgnoreCase);
-        if (root.TryGetProperty("AUTH", out var authArray) && authArray.ValueKind == System.Text.Json.JsonValueKind.Array)
+        if (root.TryGetProperty("PAYMENTS", out var authArray) && authArray.ValueKind == System.Text.Json.JsonValueKind.Array)
         {
             foreach (var item in authArray.EnumerateArray())
             {
@@ -38,10 +38,10 @@ public class ErrorCatalog : IErrorCatalog
         if (_map.TryGetValue(code, out var e))
             return new ErrorInfo(code, e.Message);
 
-        const string Fallback = "PAY-000";
+        const string Fallback = "PAY-001";
         if (_map.TryGetValue(Fallback, out var f))
             return new ErrorInfo(Fallback, f.Message);
 
-        return new ErrorInfo(code, "An unexpected error occurred.");
+        return new ErrorInfo(code, "Error in errors.json file.");
     }
 }

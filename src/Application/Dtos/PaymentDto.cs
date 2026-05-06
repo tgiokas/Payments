@@ -10,6 +10,7 @@ public class PaymentDto
     public string Currency { get; set; } = string.Empty;
     public string Method { get; set; } = string.Empty;
     public string Status { get; set; } = string.Empty;
+    public string? Email { get; set; }
 
     // Bank Info
     public string? BankName { get; set; }
@@ -34,8 +35,7 @@ public class PaymentDto
     public string? PaymentWay { get; set; }
     public string? ActionCode { get; set; }
     public string? ErrorCode { get; set; }
-    public string? ErrorMessage { get; set; }
-    public string? Email { get; set; }
+    public string? ErrorMessage { get; set; }  
 
     public DateTime CreatedAt { get; set; }
     public DateTime? ModifiedAt { get; set; }

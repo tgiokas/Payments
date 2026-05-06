@@ -37,6 +37,10 @@ namespace Payments.Infrastructure.Migrations
                         .HasColumnType("numeric")
                         .HasColumnName("amount");
 
+                    b.Property<string>("ApplicationId")
+                        .HasColumnType("text")
+                        .HasColumnName("application_id");
+
                     b.Property<string>("ApprovalCode")
                         .HasColumnType("text")
                         .HasColumnName("approval_code");

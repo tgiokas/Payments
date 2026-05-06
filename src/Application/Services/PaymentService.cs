@@ -74,6 +74,7 @@ public class PaymentService : IPaymentService
             Currency = request.Currency,
             Method = method,
             IdempotencyKey = idempotencyKey,
+            ApplicationId = request.ApplicationId,
             Status = PaymentStatus.Pending,
             OrderStatus = JccOrderStatus.RegisteredNotPaid
         };
@@ -209,6 +210,12 @@ public class PaymentService : IPaymentService
         var paymentDto = MapToPaymentDto(payment);
 
         return Result<PaymentDto>.Ok(paymentDto);
+    }
+
+    public async Task<string?> GetApplicationIdByGatewayOrderIdAsync(string gatewayOrderId, CancellationToken ct = default)
+    {
+        var payment = await _repo.GetByGatewayOrderIdAsync(gatewayOrderId, ct);
+        return payment?.ApplicationId;
     }
 
     private static PaymentConfirmResponse BuildConfirmResponse(Payment payment)

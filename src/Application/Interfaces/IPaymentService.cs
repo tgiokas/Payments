@@ -8,4 +8,5 @@ public interface IPaymentService
     Task<Result<PaymentConfirmResponse>> ConfirmPaymentAsync(string gatewayOrderId, CancellationToken ct = default);
     Task<Result<PaymentDto>> GetByIdAsync(Guid id, CancellationToken ct = default);
     Task<Result<PaymentDto>> GetByOrderNumberAsync(string orderNumber, CancellationToken ct = default);
+    Task<string?> GetApplicationIdByGatewayOrderIdAsync(string gatewayOrderId, CancellationToken ct = default);
 }

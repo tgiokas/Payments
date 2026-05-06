@@ -4,8 +4,7 @@ namespace Payments.Domain.Entities;
 
 public class Payment
 {   
-    public Guid Id { get; set; } = Guid.NewGuid();
-    public string? Description { get; set; }
+    public Guid Id { get; set; } = Guid.NewGuid();    
     // Payment order reference (unique)
     public string OrderNumber { get; set; } = string.Empty;
     // JCC order id (returned by register.do)
@@ -15,6 +14,11 @@ public class Payment
     public PaymentMethod Method { get; set; }
     public PaymentStatus Status { get; set; } = PaymentStatus.Pending;
     public string IdempotencyKey { get; set; } = string.Empty;
+
+    // Application identifier (used to build dynamic frontend return URL)
+    public string? ApplicationId { get; set; }
+    public string? Description { get; set; }
+    public string? Email { get; set; }
 
     // Bank Info
     public string? BankName { get; set; }  
@@ -40,8 +44,7 @@ public class Payment
     public string? ActionCode { get; set; }
     public JccOrderStatus OrderStatus { get; set; }
     public string? ErrorCode { get; set; }
-    public string? ErrorMessage { get; set; }
-    public string? Email { get; set; }
+    public string? ErrorMessage { get; set; }    
 
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime? ModifiedAt { get; set; }

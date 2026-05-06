@@ -1,5 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 
+using Npgsql;
+
 using Serilog;
 
 using Payments.Api.Middlewares;
@@ -64,17 +66,10 @@ builder.Services.AddCors(options =>
     });
 });
 
-//if (builder.Environment.IsDevelopment())
-//{
-//    builder.Services.AddEndpointsApiExplorer();
-//    builder.Services.AddSwaggerGen();
-//}
-
 var app = builder.Build();
 
 // Serve static files from wwwroot
 //app.UseStaticFiles();
-
 //app.UseRouting();
 
 // Expose a simple health endpoint at /health
@@ -84,7 +79,24 @@ Log.Information("Application is starting...");
 
 using var scope = app.Services.CreateScope();
 var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-dbContext.Database.Migrate();
+try
+{
+    dbContext.Database.Migrate();
+}
+catch (PostgresException ex) when (ex.SqlState == "42P07" && ex.MessageText?.Contains("__EFMigrationsHistory", StringComparison.Ordinal) == true)
+{
+    // History table already exists (schema mismatch or race). Retry once so migrator sees it and applies pending migrations.
+    Log.Warning("Migration history table already exists, retrying Migrate(): {Message}", ex.MessageText);
+    try
+    {
+        dbContext.Database.Migrate();
+    }
+    catch (PostgresException retryEx) when (retryEx.SqlState == "42P07")
+    {
+        // Retry hit "relation X already exists" — another replica already applied migrations. Safe to continue.
+        Log.Warning("Relation already exists on retry (migrations likely applied by another replica): {Message}", retryEx.MessageText);
+    }
+}
 Log.Information("Database migrations applied (if any).");
 
 app.UseCors("CorsPolicy");

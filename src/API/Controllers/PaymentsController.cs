@@ -5,20 +5,20 @@ using Payments.Application.Interfaces;
 
 namespace Payments.Api.Controllers;
 
-[ApiController]
+[ApiController]   
 [Route("payments")]
 public class PaymentsController : ControllerBase
 {
     private readonly IPaymentService _paymentService;
     private readonly IConfiguration _config;
-    private readonly string _frontEndUrl;
+    private readonly string? _defaultFrontEndUrl;
 
     public PaymentsController(IPaymentService paymentService, IConfiguration config)
     {
         _paymentService = paymentService;
         _config = config;
 
-        _frontEndUrl = _config["JCC_FRONTEND_RETURN_URL"] ?? throw new ArgumentNullException("JCC_FRONTEND_RETURN_URL is missing.");
+        _defaultFrontEndUrl = _config["JCC_FRONTEND_RETURN_URL"];
     }
 
     /// Initiate payment => register.do => return formUrl
@@ -45,22 +45,26 @@ public class PaymentsController : ControllerBase
 
         var result = await _paymentService.ConfirmPaymentAsync(gatewayOrderId, ct);
 
+        // Resolve frontend return URL: base URL + applicationId
+        var applicationId = await _paymentService.GetApplicationIdByGatewayOrderIdAsync(gatewayOrderId, ct);
+
+        var baseUrl = _defaultFrontEndUrl;
+
+        if (string.IsNullOrWhiteSpace(baseUrl))
+            return BadRequest("No frontend base URL configured.");
+        
+        var frontendUrl = !string.IsNullOrWhiteSpace(applicationId)
+            ? $"{baseUrl.TrimEnd('/')}/{applicationId}"
+            : baseUrl;
+
         // Build redirect URL back to frontend
         var redirectUrl =
-            $"{_frontEndUrl}" +
+            $"{frontendUrl}" +
             $"?status={Uri.EscapeDataString(result.Data?.Status ?? "Error")}" +
             $"&order={Uri.EscapeDataString(result.Data?.OrderNumber!)}" +
             $"&paymentId={Uri.EscapeDataString(result.Data?.PaymentId.ToString()!)}";
 
         return Redirect(redirectUrl);
-
-        //return Ok(new
-        //{
-        //    message = "Callback processed successfully",
-        //    gatewayOrderId,
-        //    status = result.Status,
-        //    result
-        //});
     }
 
     [HttpGet("{id:guid}")]
@@ -74,5 +78,4 @@ public class PaymentsController : ControllerBase
     {
         return Ok(await _paymentService.GetByOrderNumberAsync(orderNumber));
     }
-
 }

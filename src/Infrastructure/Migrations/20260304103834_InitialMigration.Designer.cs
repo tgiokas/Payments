@@ -12,7 +12,7 @@ using Payments.Infrastructure.Database;
 namespace Payments.Infrastructure.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20260303145208_InitialMigration")]
+    [Migration("20260304103834_InitialMigration")]
     partial class InitialMigration
     {
         /// <inheritdoc />
@@ -40,12 +40,16 @@ namespace Payments.Infrastructure.Migrations
                         .HasColumnType("numeric")
                         .HasColumnName("amount");
 
+                    b.Property<string>("ApplicationId")
+                        .HasColumnType("text")
+                        .HasColumnName("application_id");
+
                     b.Property<string>("ApprovalCode")
                         .HasColumnType("text")
                         .HasColumnName("approval_code");
 
-                    b.Property<long?>("ApprovedAmount")
-                        .HasColumnType("bigint")
+                    b.Property<decimal?>("ApprovedAmount")
+                        .HasColumnType("numeric")
                         .HasColumnName("approved_amount");
 
                     b.Property<string>("BankCountryCode")
@@ -73,9 +77,13 @@ namespace Payments.Infrastructure.Migrations
                         .HasColumnType("text")
                         .HasColumnName("currency");
 
-                    b.Property<long?>("DepositedAmount")
-                        .HasColumnType("bigint")
+                    b.Property<decimal?>("DepositedAmount")
+                        .HasColumnType("numeric")
                         .HasColumnName("deposited_amount");
+
+                    b.Property<string>("Description")
+                        .HasColumnType("text")
+                        .HasColumnName("description");
 
                     b.Property<string>("Email")
                         .HasColumnType("text")
@@ -93,8 +101,8 @@ namespace Payments.Infrastructure.Migrations
                         .HasColumnType("text")
                         .HasColumnName("expiration");
 
-                    b.Property<long?>("FeeAmount")
-                        .HasColumnType("bigint")
+                    b.Property<decimal?>("FeeAmount")
+                        .HasColumnType("numeric")
                         .HasColumnName("fee_amount");
 
                     b.Property<string>("GatewayOrderId")
@@ -139,16 +147,16 @@ namespace Payments.Infrastructure.Migrations
                         .HasColumnType("text")
                         .HasColumnName("payment_way");
 
-                    b.Property<long?>("RefundedAmount")
-                        .HasColumnType("bigint")
+                    b.Property<decimal?>("RefundedAmount")
+                        .HasColumnType("numeric")
                         .HasColumnName("refunded_amount");
 
                     b.Property<int>("Status")
                         .HasColumnType("integer")
                         .HasColumnName("status");
 
-                    b.Property<long?>("TotalAmount")
-                        .HasColumnType("bigint")
+                    b.Property<decimal?>("TotalAmount")
+                        .HasColumnType("numeric")
                         .HasColumnName("total_amount");
 
                     b.HasKey("Id")

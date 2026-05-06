@@ -16,7 +16,6 @@ namespace Payments.Infrastructure.Migrations
                 columns: table => new
                 {
                     id = table.Column<Guid>(type: "uuid", nullable: false),
-                    description = table.Column<string>(type: "text", nullable: true),
                     order_number = table.Column<string>(type: "text", nullable: false),
                     gateway_order_id = table.Column<string>(type: "text", nullable: true),
                     amount = table.Column<decimal>(type: "numeric", nullable: false),
@@ -24,6 +23,9 @@ namespace Payments.Infrastructure.Migrations
                     method = table.Column<int>(type: "integer", nullable: false),
                     status = table.Column<int>(type: "integer", nullable: false),
                     idempotency_key = table.Column<string>(type: "text", nullable: false),
+                    application_id = table.Column<string>(type: "text", nullable: true),
+                    description = table.Column<string>(type: "text", nullable: true),
+                    email = table.Column<string>(type: "text", nullable: true),
                     bank_name = table.Column<string>(type: "text", nullable: true),
                     bank_country_code = table.Column<string>(type: "text", nullable: true),
                     bank_country_name = table.Column<string>(type: "text", nullable: true),
@@ -43,7 +45,6 @@ namespace Payments.Infrastructure.Migrations
                     order_status = table.Column<int>(type: "integer", nullable: false),
                     error_code = table.Column<string>(type: "text", nullable: true),
                     error_message = table.Column<string>(type: "text", nullable: true),
-                    email = table.Column<string>(type: "text", nullable: true),
                     created_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     modified_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: true)
                 },
